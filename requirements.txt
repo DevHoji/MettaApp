@@ -1,0 +1,16 @@
+# Core dependencies for Smart To-Do Task Scheduler
+
+# MeTTa integration
+hyperon
+
+# Backend framework
+flask
+flask-cors
+
+# Data handling
+python-dateutil
+
+# Development tools
+pytest
+black
+flake8
