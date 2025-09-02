@@ -266,3 +266,125 @@ class MeTTaBridge:
             return {"success": True, "message": f"Task {task_id} deleted successfully"}
         except Exception as e:
             return {"success": False, "error": str(e)}
+
+    def get_overdue_tasks(self) -> List[str]:
+        """Get tasks that are overdue"""
+        try:
+            result = self.metta.run('!(getOverdueTasks)')
+            if result and result[0]:
+                return [str(task) for task in result[0]]
+            return []
+        except Exception as e:
+            print(f"Error getting overdue tasks: {e}")
+            return []
+
+    def get_tasks_due_today(self) -> List[str]:
+        """Get tasks due today"""
+        try:
+            result = self.metta.run('!(getTasksDueToday)')
+            if result and result[0]:
+                return [str(task) for task in result[0]]
+            return []
+        except Exception as e:
+            print(f"Error getting tasks due today: {e}")
+            return []
+
+    def get_tasks_due_within(self, days: int) -> List[str]:
+        """Get tasks due within specified number of days"""
+        try:
+            result = self.metta.run(f'!(getTasksDueWithin {days})')
+            if result and result[0]:
+                return [str(task) for task in result[0]]
+            return []
+        except Exception as e:
+            print(f"Error getting tasks due within {days} days: {e}")
+            return []
+
+    def get_optimal_task_order(self) -> List[str]:
+        """Get tasks ordered by optimal scoring (priority + urgency)"""
+        try:
+            result = self.metta.run('!(getOptimalTaskOrder)')
+            if result and result[0]:
+                return [str(task) for task in result[0]]
+            return []
+        except Exception as e:
+            print(f"Error getting optimal task order: {e}")
+            return []
+
+    def get_recommendation_with_reason(self) -> Dict[str, Any]:
+        """Get next task recommendation with explanation"""
+        try:
+            result = self.metta.run('!(getRecommendationWithReason)')
+            if result and result[0]:
+                recommendation = result[0][0]
+                if hasattr(recommendation, 'get_children') and len(recommendation.get_children()) >= 2:
+                    children = recommendation.get_children()
+                    if str(children[0]) == "Recommendation":
+                        task_id = str(children[1])
+                        reason = str(children[2]) if len(children) > 2 else "Optimal choice based on priority and dependencies"
+                        return {
+                            "task_id": task_id,
+                            "reason": reason,
+                            "has_recommendation": True
+                        }
+                    elif str(children[0]) == "NoRecommendation":
+                        return {
+                            "task_id": None,
+                            "reason": str(children[1]) if len(children) > 1 else "No tasks available",
+                            "has_recommendation": False
+                        }
+
+            return {
+                "task_id": None,
+                "reason": "Unable to generate recommendation",
+                "has_recommendation": False
+            }
+        except Exception as e:
+            print(f"Error getting recommendation with reason: {e}")
+            return {
+                "task_id": None,
+                "reason": "Error generating recommendation",
+                "has_recommendation": False
+            }
+
+    def get_productivity_insights(self) -> Dict[str, Any]:
+        """Get comprehensive productivity insights from MeTTa"""
+        try:
+            result = self.metta.run('!(getProductivityInsights)')
+            if result and result[0]:
+                # Parse the productivity report
+                insights = {
+                    "overdue_tasks": self.get_overdue_tasks(),
+                    "tasks_due_today": self.get_tasks_due_today(),
+                    "tasks_due_this_week": self.get_tasks_due_within(7),
+                    "optimal_order": self.get_optimal_task_order(),
+                    "recommendations": [
+                        "Focus on high-priority tasks first",
+                        "Complete dependencies before dependent tasks",
+                        "Address overdue tasks immediately"
+                    ]
+                }
+                return insights
+            return {}
+        except Exception as e:
+            print(f"Error getting productivity insights: {e}")
+            return {}
+
+    def get_enhanced_stats(self) -> Dict[str, Any]:
+        """Get enhanced statistics with urgency and insights"""
+        try:
+            basic_stats = self.get_completion_stats()
+            overdue_count = len(self.get_overdue_tasks())
+            due_today_count = len(self.get_tasks_due_today())
+            due_this_week_count = len(self.get_tasks_due_within(7))
+
+            return {
+                **basic_stats,
+                "overdue_tasks": overdue_count,
+                "due_today": due_today_count,
+                "due_this_week": due_this_week_count,
+                "urgency_level": "high" if overdue_count > 0 else "medium" if due_today_count > 0 else "low"
+            }
+        except Exception as e:
+            print(f"Error getting enhanced stats: {e}")
+            return self.get_completion_stats()

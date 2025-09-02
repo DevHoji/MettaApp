@@ -161,8 +161,60 @@ def get_stats():
         if not metta_bridge:
             return jsonify({"error": "MeTTa bridge not initialized"}), 500
 
-        stats = metta_bridge.get_completion_stats()
+        stats = metta_bridge.get_enhanced_stats()
         return jsonify({"success": True, "stats": stats})
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/insights', methods=['GET'])
+def get_insights():
+    """Get productivity insights from MeTTa AI"""
+    try:
+        if not metta_bridge:
+            return jsonify({"error": "MeTTa bridge not initialized"}), 500
+
+        insights = metta_bridge.get_productivity_insights()
+        return jsonify({"success": True, "insights": insights})
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/recommendation-detailed', methods=['GET'])
+def get_detailed_recommendation():
+    """Get next task recommendation with explanation"""
+    try:
+        if not metta_bridge:
+            return jsonify({"error": "MeTTa bridge not initialized"}), 500
+
+        recommendation = metta_bridge.get_recommendation_with_reason()
+        return jsonify({"success": True, "recommendation": recommendation})
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/overdue-tasks', methods=['GET'])
+def get_overdue_tasks():
+    """Get overdue tasks"""
+    try:
+        if not metta_bridge:
+            return jsonify({"error": "MeTTa bridge not initialized"}), 500
+
+        overdue_tasks = metta_bridge.get_overdue_tasks()
+        return jsonify({"success": True, "overdue_tasks": overdue_tasks})
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/optimal-order', methods=['GET'])
+def get_optimal_order():
+    """Get optimal task order based on priority and urgency"""
+    try:
+        if not metta_bridge:
+            return jsonify({"error": "MeTTa bridge not initialized"}), 500
+
+        optimal_order = metta_bridge.get_optimal_task_order()
+        return jsonify({"success": True, "optimal_order": optimal_order})
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500

@@ -298,33 +298,35 @@ class TaskScheduler {
     }
 
     /**
-     * Load next task recommendation from MeTTa AI
+     * Load next task recommendation from MeTTa AI with detailed explanation
      */
     async loadNextTaskRecommendation() {
         try {
-            const response = await this.apiRequest('/next-task');
-            const nextTaskId = response.next_task;
+            const response = await this.apiRequest('/recommendation-detailed');
+            const recommendation = response.recommendation;
 
             const descriptionElement = document.getElementById('next-task-description');
             const startButton = document.getElementById('start-next-task');
 
-            if (nextTaskId) {
-                const task = this.tasks.find(t => t.id === nextTaskId);
+            if (recommendation.has_recommendation && recommendation.task_id) {
+                const task = this.tasks.find(t => t.id === recommendation.task_id);
                 if (task) {
+                    const urgencyBadge = this.getUrgencyBadge(task);
                     descriptionElement.innerHTML = `
-                        <strong>${task.description}</strong><br>
-                        <small>Priority: ${task.priority} | Deadline: ${this.formatDate(task.deadline)}</small>
+                        <strong>${task.description}</strong> ${urgencyBadge}<br>
+                        <small>Priority: ${task.priority} | Deadline: ${this.formatDate(task.deadline)}</small><br>
+                        <em class="ai-reason">🧠 ${recommendation.reason}</em>
                     `;
                     startButton.style.display = 'block';
-                    startButton.dataset.taskId = nextTaskId;
+                    startButton.dataset.taskId = recommendation.task_id;
                 } else {
                     descriptionElement.textContent = 'Task details not found';
                     startButton.style.display = 'none';
                 }
             } else {
                 descriptionElement.innerHTML = `
-                    <em>No tasks available or all dependencies not met</em><br>
-                    <small>Add more tasks or complete dependencies to get recommendations</small>
+                    <em>No tasks available</em><br>
+                    <small>🧠 ${recommendation.reason}</small>
                 `;
                 startButton.style.display = 'none';
             }
@@ -332,6 +334,17 @@ class TaskScheduler {
             console.error('Error loading next task recommendation:', error);
             document.getElementById('next-task-description').textContent = 'Unable to load recommendation';
         }
+    }
+
+    /**
+     * Get urgency badge for task
+     */
+    getUrgencyBadge(task) {
+        const days = task.days_until_deadline;
+        if (days < 0) return '<span class="urgency-badge overdue">⚠️ OVERDUE</span>';
+        if (days === 0) return '<span class="urgency-badge due-today">🔥 DUE TODAY</span>';
+        if (days <= 3) return '<span class="urgency-badge due-soon">⏰ DUE SOON</span>';
+        return '';
     }
 
     /**
@@ -345,7 +358,7 @@ class TaskScheduler {
     }
 
     /**
-     * Update statistics display
+     * Update statistics display with enhanced MeTTa insights
      */
     async updateStats() {
         try {
@@ -364,9 +377,58 @@ class TaskScheduler {
             // Update progress ring
             this.updateProgressRing(stats.completion_percentage);
 
+            // Add urgency indicators if available
+            if (stats.overdue_tasks > 0) {
+                this.showUrgencyAlert('overdue', stats.overdue_tasks);
+            }
+            if (stats.due_today > 0) {
+                this.showUrgencyAlert('due-today', stats.due_today);
+            }
+
         } catch (error) {
             console.error('Error updating stats:', error);
         }
+    }
+
+    /**
+     * Show urgency alerts in the UI
+     */
+    showUrgencyAlert(type, count) {
+        const alertContainer = document.querySelector('.urgency-alerts') || this.createUrgencyContainer();
+
+        const alertElement = document.createElement('div');
+        alertElement.className = `urgency-alert ${type}`;
+
+        if (type === 'overdue') {
+            alertElement.innerHTML = `
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>${count} overdue task${count > 1 ? 's' : ''}</span>
+            `;
+        } else if (type === 'due-today') {
+            alertElement.innerHTML = `
+                <i class="fas fa-clock"></i>
+                <span>${count} task${count > 1 ? 's' : ''} due today</span>
+            `;
+        }
+
+        alertContainer.appendChild(alertElement);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (alertElement.parentNode) {
+                alertElement.remove();
+            }
+        }, 5000);
+    }
+
+    /**
+     * Create urgency alerts container
+     */
+    createUrgencyContainer() {
+        const container = document.createElement('div');
+        container.className = 'urgency-alerts';
+        document.querySelector('.app-header').appendChild(container);
+        return container;
     }
 
     /**
