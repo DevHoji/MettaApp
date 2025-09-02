@@ -1,8 +1,220 @@
-# Smart To-Do Task Scheduler - Backend Server
-# Flask application with MeTTa integration
+"""
+Smart To-Do Task Scheduler - Backend Server
+Flask application with MeTTa integration
 
-# This file will contain:
-# - Flask app initialization
-# - API endpoints for task management
-# - MeTTa brain integration
-# - Request/response handling
+This server provides REST API endpoints for the task scheduler frontend,
+integrating with MeTTa brain for intelligent task scheduling.
+"""
+
+from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask_cors import CORS
+import os
+import sys
+from datetime import datetime, timedelta
+import json
+
+# Add the parent directory to the path to import metta_bridge
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from backend.metta_bridge import MeTTaBridge
+
+# Initialize Flask app
+app = Flask(__name__,
+           template_folder='../frontend/templates',
+           static_folder='../frontend/static')
+CORS(app)
+
+# Initialize MeTTa bridge
+try:
+    metta_bridge = MeTTaBridge()
+    print("MeTTa bridge initialized successfully")
+except Exception as e:
+    print(f"Error initializing MeTTa bridge: {e}")
+    metta_bridge = None
+
+@app.route('/')
+def index():
+    """Serve the main application page"""
+    return render_template('index.html')
+
+@app.route('/api/tasks', methods=['GET'])
+def get_tasks():
+    """Get all tasks with their details"""
+    try:
+        if not metta_bridge:
+            return jsonify({"error": "MeTTa bridge not initialized"}), 500
+
+        tasks = metta_bridge.get_all_tasks()
+        return jsonify({"success": True, "tasks": tasks})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/tasks', methods=['POST'])
+def add_task():
+    """Add a new task"""
+    try:
+        if not metta_bridge:
+            return jsonify({"error": "MeTTa bridge not initialized"}), 500
+
+        data = request.get_json()
+
+        # Validate required fields
+        required_fields = ['description', 'deadline', 'priority']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({"success": False, "error": f"Missing required field: {field}"}), 400
+
+        # Validate priority
+        valid_priorities = ['High', 'Medium', 'Low']
+        if data['priority'] not in valid_priorities:
+            return jsonify({"success": False, "error": "Priority must be High, Medium, or Low"}), 400
+
+        # Validate date format
+        try:
+            datetime.strptime(data['deadline'], '%Y-%m-%d')
+        except ValueError:
+            return jsonify({"success": False, "error": "Invalid date format. Use YYYY-MM-DD"}), 400
+
+        # Get dependencies (optional)
+        dependencies = data.get('dependencies', [])
+
+        # Add task using MeTTa bridge
+        result = metta_bridge.add_task(
+            description=data['description'],
+            deadline=data['deadline'],
+            priority=data['priority'],
+            dependencies=dependencies
+        )
+
+        if result['success']:
+            return jsonify(result), 201
+        else:
+            return jsonify(result), 400
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/tasks/<task_id>/complete', methods=['POST'])
+def complete_task(task_id):
+    """Mark a task as completed"""
+    try:
+        if not metta_bridge:
+            return jsonify({"error": "MeTTa bridge not initialized"}), 500
+
+        result = metta_bridge.complete_task(task_id)
+
+        if result['success']:
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/tasks/<task_id>', methods=['DELETE'])
+def delete_task(task_id):
+    """Delete a task"""
+    try:
+        if not metta_bridge:
+            return jsonify({"error": "MeTTa bridge not initialized"}), 500
+
+        result = metta_bridge.delete_task(task_id)
+
+        if result['success']:
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/schedule', methods=['GET'])
+def get_schedule():
+    """Get the optimal task schedule"""
+    try:
+        if not metta_bridge:
+            return jsonify({"error": "MeTTa bridge not initialized"}), 500
+
+        scheduled_tasks = metta_bridge.get_scheduled_tasks()
+        return jsonify({"success": True, "schedule": scheduled_tasks})
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/next-task', methods=['GET'])
+def get_next_task():
+    """Get the next recommended task"""
+    try:
+        if not metta_bridge:
+            return jsonify({"error": "MeTTa bridge not initialized"}), 500
+
+        next_task = metta_bridge.get_next_task()
+        return jsonify({"success": True, "next_task": next_task})
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/stats', methods=['GET'])
+def get_stats():
+    """Get completion statistics"""
+    try:
+        if not metta_bridge:
+            return jsonify({"error": "MeTTa bridge not initialized"}), 500
+
+        stats = metta_bridge.get_completion_stats()
+        return jsonify({"success": True, "stats": stats})
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/dependencies/<task_id>', methods=['GET'])
+def get_task_dependencies(task_id):
+    """Get dependencies for a specific task"""
+    try:
+        if not metta_bridge:
+            return jsonify({"error": "MeTTa bridge not initialized"}), 500
+
+        dependencies = metta_bridge.get_task_dependencies(task_id)
+        return jsonify({"success": True, "dependencies": dependencies})
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        "status": "healthy",
+        "metta_bridge": "initialized" if metta_bridge else "not initialized",
+        "timestamp": datetime.now().isoformat()
+    })
+
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 errors"""
+    return jsonify({"error": "Endpoint not found"}), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors"""
+    return jsonify({"error": "Internal server error"}), 500
+
+if __name__ == '__main__':
+    print("Starting Smart To-Do Task Scheduler Backend...")
+    print("MeTTa Bridge Status:", "Initialized" if metta_bridge else "Not Initialized")
+
+    # Add some sample tasks for demonstration
+    if metta_bridge:
+        print("Adding sample tasks...")
+        try:
+            # Sample tasks with dependencies
+            metta_bridge.add_task("Plan project structure", "2024-01-15", "High", [])
+            metta_bridge.add_task("Set up development environment", "2024-01-16", "High", ["Task1"])
+            metta_bridge.add_task("Implement core features", "2024-01-20", "Medium", ["Task2"])
+            metta_bridge.add_task("Write tests", "2024-01-22", "Medium", ["Task3"])
+            metta_bridge.add_task("Deploy application", "2024-01-25", "Low", ["Task4"])
+            print("Sample tasks added successfully")
+        except Exception as e:
+            print(f"Error adding sample tasks: {e}")
+
+    app.run(debug=True, host='0.0.0.0', port=5000)

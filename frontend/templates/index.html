@@ -1,9 +1,189 @@
-<!-- Smart To-Do Task Scheduler - Main Interface -->
-<!-- Professional web interface will be implemented here -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart To-Do Task Scheduler</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <i class="fas fa-brain logo-icon"></i>
+                    <h1>Smart Task Scheduler</h1>
+                    <span class="subtitle">Powered by MeTTa AI</span>
+                </div>
+                <div class="header-stats">
+                    <div class="stat-card">
+                        <i class="fas fa-tasks"></i>
+                        <div class="stat-info">
+                            <span class="stat-number" id="total-tasks">0</span>
+                            <span class="stat-label">Total Tasks</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-check-circle"></i>
+                        <div class="stat-info">
+                            <span class="stat-number" id="completed-tasks">0</span>
+                            <span class="stat-label">Completed</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-clock"></i>
+                        <div class="stat-info">
+                            <span class="stat-number" id="pending-tasks">0</span>
+                            <span class="stat-label">Pending</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
 
-<!-- This file will contain:
-     - Modern responsive design
-     - Task input forms
-     - Schedule display components
-     - Interactive task management UI
--->
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Left Panel - Task Management -->
+            <div class="left-panel">
+                <!-- Add Task Form -->
+                <div class="panel-section">
+                    <h2><i class="fas fa-plus-circle"></i> Add New Task</h2>
+                    <form id="add-task-form" class="task-form">
+                        <div class="form-group">
+                            <label for="task-description">Task Description</label>
+                            <input type="text" id="task-description" name="description"
+                                   placeholder="Enter task description..." required>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="task-deadline">Deadline</label>
+                                <input type="date" id="task-deadline" name="deadline" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="task-priority">Priority</label>
+                                <select id="task-priority" name="priority" required>
+                                    <option value="">Select Priority</option>
+                                    <option value="High">🔴 High</option>
+                                    <option value="Medium">🟡 Medium</option>
+                                    <option value="Low">🟢 Low</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="task-dependencies">Dependencies (Optional)</label>
+                            <select id="task-dependencies" name="dependencies" multiple>
+                                <!-- Options will be populated dynamically -->
+                            </select>
+                            <small class="form-help">Hold Ctrl/Cmd to select multiple tasks</small>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add Task
+                        </button>
+                    </form>
+                </div>
+
+                <!-- AI Recommendation -->
+                <div class="panel-section ai-recommendation">
+                    <h2><i class="fas fa-robot"></i> AI Recommendation</h2>
+                    <div id="next-task-card" class="recommendation-card">
+                        <div class="recommendation-content">
+                            <i class="fas fa-lightbulb recommendation-icon"></i>
+                            <div class="recommendation-text">
+                                <h3>Next Suggested Task</h3>
+                                <p id="next-task-description">Loading recommendation...</p>
+                            </div>
+                        </div>
+                        <button id="start-next-task" class="btn btn-accent" style="display: none;">
+                            <i class="fas fa-play"></i> Start This Task
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Task Lists and Schedule -->
+            <div class="right-panel">
+                <!-- Progress Overview -->
+                <div class="panel-section">
+                    <h2><i class="fas fa-chart-pie"></i> Progress Overview</h2>
+                    <div class="progress-container">
+                        <div class="progress-circle">
+                            <svg class="progress-ring" width="120" height="120">
+                                <circle class="progress-ring-circle" cx="60" cy="60" r="50"></circle>
+                            </svg>
+                            <div class="progress-text">
+                                <span id="progress-percentage">0%</span>
+                                <small>Complete</small>
+                            </div>
+                        </div>
+                        <div class="progress-details">
+                            <div class="progress-item">
+                                <span class="progress-dot completed"></span>
+                                <span>Completed: <strong id="progress-completed">0</strong></span>
+                            </div>
+                            <div class="progress-item">
+                                <span class="progress-dot pending"></span>
+                                <span>Pending: <strong id="progress-pending">0</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Task List -->
+                <div class="panel-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-list"></i> Task Schedule</h2>
+                        <div class="view-controls">
+                            <button class="btn btn-small" id="refresh-tasks">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="task-filters">
+                        <button class="filter-btn active" data-filter="all">All Tasks</button>
+                        <button class="filter-btn" data-filter="pending">Pending</button>
+                        <button class="filter-btn" data-filter="completed">Completed</button>
+                        <button class="filter-btn" data-filter="high">High Priority</button>
+                    </div>
+
+                    <div id="task-list" class="task-list">
+                        <!-- Tasks will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <i class="fas fa-brain fa-spin"></i>
+            <p>MeTTa AI is thinking...</p>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Task Detail Modal -->
+    <div id="task-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Task Details</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Task details will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
