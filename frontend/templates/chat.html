@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeTTa Brain Chat - Smart Task Scheduler</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="chat-container">
+        <!-- Header -->
+        <header class="chat-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <i class="fas fa-brain logo-icon pulsing"></i>
+                    <div class="title-section">
+                        <h1>MeTTa Brain Chat</h1>
+                        <span class="subtitle">Direct conversation with the AI reasoning engine</span>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <a href="/" class="btn btn-small">
+                        <i class="fas fa-arrow-left"></i> Back to Tasks
+                    </a>
+                    <button id="clear-chat" class="btn btn-small">
+                        <i class="fas fa-trash"></i> Clear Chat
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Chat Area -->
+        <main class="chat-main">
+            <!-- Chat Messages -->
+            <div class="chat-messages" id="chat-messages">
+                <div class="message bot-message welcome-message">
+                    <div class="message-avatar">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div class="message-content">
+                        <div class="message-text">
+                            <h3>🧠 Welcome to MeTTa Brain Chat!</h3>
+                            <p>I'm your intelligent task scheduling assistant. You can ask me anything about your tasks, dependencies, scheduling, and productivity.</p>
+                            
+                            <div class="example-questions">
+                                <h4>Try asking me:</h4>
+                                <div class="question-chips">
+                                    <span class="question-chip" onclick="askQuestion('What is the next task?')">What is the next task?</span>
+                                    <span class="question-chip" onclick="askQuestion('Show all tasks')">Show all tasks</span>
+                                    <span class="question-chip" onclick="askQuestion('What tasks are overdue?')">What tasks are overdue?</span>
+                                    <span class="question-chip" onclick="askQuestion('Schedule my tasks')">Schedule my tasks</span>
+                                    <span class="question-chip" onclick="askQuestion('How am I doing?')">How am I doing?</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="message-time">Just now</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Input -->
+            <div class="chat-input-container">
+                <div class="chat-input-wrapper">
+                    <input type="text" id="chat-input" placeholder="Ask MeTTa brain anything about your tasks..." autocomplete="off">
+                    <button id="send-button" class="send-button">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                
+                <!-- Mode Toggle -->
+                <div class="mode-toggle">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="debug-mode">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label">Show MeTTa Debug Output</span>
+                </div>
+            </div>
+        </main>
+
+        <!-- Debug Panel -->
+        <div class="debug-panel" id="debug-panel">
+            <div class="debug-header">
+                <h3><i class="fas fa-code"></i> MeTTa Debug Output</h3>
+                <button id="close-debug" class="close-debug">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="debug-content" id="debug-content">
+                <p class="debug-placeholder">Enable debug mode and ask a question to see raw MeTTa output...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <i class="fas fa-brain fa-spin"></i>
+            <p>MeTTa is thinking...</p>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+</body>
+</html>

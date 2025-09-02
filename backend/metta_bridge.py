@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 from hyperon import MeTTa, S, V, E, ValueAtom, OperationAtom
 import json
+import pickle
 
 
 class MeTTaBridge:
@@ -20,8 +21,55 @@ class MeTTaBridge:
         """Initialize MeTTa instance and load scheduler logic"""
         self.metta = MeTTa()
         self.task_counter = 0
+        self.tasks_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'tasks.json')
+        self.debug_mode = True  # Enable MeTTa debug output
+        self._ensure_data_directory()
         self._load_scheduler_logic()
         self._register_python_functions()
+        self._load_persisted_tasks()
+
+    def _ensure_data_directory(self):
+        """Ensure data directory exists"""
+        data_dir = os.path.dirname(self.tasks_file)
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir)
+
+    def _load_persisted_tasks(self):
+        """Load tasks from file and restore to MeTTa space"""
+        try:
+            if os.path.exists(self.tasks_file):
+                with open(self.tasks_file, 'r') as f:
+                    tasks_data = json.load(f)
+
+                # Restore tasks to MeTTa space
+                for task_data in tasks_data.get('tasks', []):
+                    task_atom = f'(task {task_data["id"]} Description "{task_data["description"]}" Deadline "{task_data["deadline"]}" Priority {task_data["priority"]} Dependencies ({" ".join(task_data["dependencies"])}))'
+                    self.metta.run(task_atom)
+
+                    # Restore completion status
+                    if task_data.get('completed', False):
+                        self.metta.run(f'(taskStatus {task_data["id"]} Completed)')
+
+                self.task_counter = tasks_data.get('task_counter', 0)
+                print(f"Loaded {len(tasks_data.get('tasks', []))} persisted tasks")
+        except Exception as e:
+            print(f"Error loading persisted tasks: {e}")
+
+    def _save_tasks_to_file(self):
+        """Save current tasks to file for persistence"""
+        try:
+            tasks = self.get_all_tasks()
+            tasks_data = {
+                'task_counter': self.task_counter,
+                'tasks': tasks,
+                'timestamp': datetime.now().isoformat()
+            }
+
+            with open(self.tasks_file, 'w') as f:
+                json.dump(tasks_data, f, indent=2)
+
+        except Exception as e:
+            print(f"Error saving tasks to file: {e}")
 
     def _load_scheduler_logic(self):
         """Load MeTTa scheduler logic from file"""
@@ -98,6 +146,9 @@ class MeTTaBridge:
                 # Remove the invalid task
                 self.metta.run(f'!(remove-atom &self {task_atom})')
                 return {"success": False, "error": "Circular dependency detected"}
+
+            # Save tasks to file for persistence
+            self._save_tasks_to_file()
 
             return {
                 "success": True,
@@ -388,3 +439,191 @@ class MeTTaBridge:
         except Exception as e:
             print(f"Error getting enhanced stats: {e}")
             return self.get_completion_stats()
+
+    def execute_metta_query(self, query: str) -> Dict[str, Any]:
+        """Execute raw MeTTa query and return both raw and processed results"""
+        try:
+            print(f"\n🧠 MeTTa Query: {query}")
+
+            # Execute the query
+            raw_result = self.metta.run(query)
+
+            # Log raw MeTTa output
+            print(f"🔍 Raw MeTTa Result: {raw_result}")
+
+            # Process result for user-friendly display
+            processed_result = self._process_metta_result(raw_result, query)
+
+            return {
+                "success": True,
+                "query": query,
+                "raw_result": str(raw_result),
+                "processed_result": processed_result,
+                "timestamp": datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            error_msg = f"Error executing MeTTa query: {e}"
+            print(f"❌ {error_msg}")
+            return {
+                "success": False,
+                "query": query,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+
+    def _process_metta_result(self, raw_result, query: str) -> str:
+        """Process raw MeTTa result into user-friendly format"""
+        try:
+            if not raw_result or not raw_result[0]:
+                return "No results found."
+
+            # Handle different types of queries
+            if "getNextTask" in query:
+                if str(raw_result[0][0]) == "NoTasksAvailable":
+                    return "No tasks are currently available. All tasks may have unmet dependencies."
+                else:
+                    task_id = str(raw_result[0][0])
+                    task = next((t for t in self.get_all_tasks() if t['id'] == task_id), None)
+                    if task:
+                        return f"Next recommended task: '{task['description']}' (Priority: {task['priority']}, Deadline: {task['deadline']})"
+                    return f"Next recommended task: {task_id}"
+
+            elif "scheduleTasks" in query:
+                if raw_result[0]:
+                    task_ids = [str(task) for task in raw_result[0]]
+                    return f"Optimal task order: {' → '.join(task_ids)}"
+                return "No tasks to schedule."
+
+            elif "getOverdueTasks" in query:
+                if raw_result[0]:
+                    overdue_tasks = [str(task) for task in raw_result[0]]
+                    return f"Overdue tasks: {', '.join(overdue_tasks)}"
+                return "No overdue tasks."
+
+            elif "getDependencies" in query:
+                if raw_result[0] and hasattr(raw_result[0][0], 'get_children'):
+                    deps = [str(dep) for dep in raw_result[0][0].get_children()]
+                    return f"Dependencies: {', '.join(deps) if deps else 'None'}"
+                return "No dependencies found."
+
+            elif "match" in query and "task" in query:
+                # Handle task queries
+                tasks = []
+                for item in raw_result[0]:
+                    if hasattr(item, 'get_children') and len(item.get_children()) >= 5:
+                        children = item.get_children()
+                        task_id = str(children[0])
+                        description = str(children[1]).strip('"')
+                        tasks.append(f"{task_id}: {description}")
+
+                if tasks:
+                    return f"Found {len(tasks)} tasks:\n" + "\n".join(tasks)
+                return "No tasks found."
+
+            else:
+                # Generic result processing
+                return f"Result: {str(raw_result[0])}"
+
+        except Exception as e:
+            return f"Error processing result: {str(e)}"
+
+    def ask_metta_brain(self, user_question: str) -> Dict[str, Any]:
+        """Natural language interface to ask MeTTa brain questions"""
+        try:
+            # Convert natural language to MeTTa queries
+            metta_query = self._convert_question_to_metta(user_question.lower())
+
+            if not metta_query:
+                return {
+                    "success": False,
+                    "error": "Could not understand the question. Try asking about tasks, dependencies, or scheduling."
+                }
+
+            # Execute the MeTTa query
+            result = self.execute_metta_query(metta_query)
+
+            # Add natural language explanation
+            result["natural_answer"] = self._generate_natural_answer(user_question, result)
+
+            return result
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Error processing question: {str(e)}"
+            }
+
+    def _convert_question_to_metta(self, question: str) -> str:
+        """Convert natural language question to MeTTa query"""
+        question = question.lower().strip()
+
+        # Question patterns and their MeTTa equivalents
+        patterns = {
+            "what is the next task": "!(getNextTask)",
+            "next task": "!(getNextTask)",
+            "what should i do next": "!(getNextTask)",
+            "recommend task": "!(getNextTask)",
+
+            "show all tasks": "!(match &self (task $task Description $desc Deadline $deadline Priority $priority Dependencies $deps) ($task $desc $deadline $priority $deps))",
+            "list tasks": "!(match &self (task $task Description $desc Deadline $deadline Priority $priority Dependencies $deps) ($task $desc $deadline $priority $deps))",
+            "all tasks": "!(match &self (task $task Description $desc Deadline $deadline Priority $priority Dependencies $deps) ($task $desc $deadline $priority $deps))",
+
+            "schedule tasks": "!(scheduleTasks)",
+            "optimal order": "!(scheduleTasks)",
+            "task order": "!(scheduleTasks)",
+
+            "overdue tasks": "!(getOverdueTasks)",
+            "what tasks are overdue": "!(getOverdueTasks)",
+            "late tasks": "!(getOverdueTasks)",
+
+            "completed tasks": "!(match &self (taskStatus $task Completed) $task)",
+            "finished tasks": "!(match &self (taskStatus $task Completed) $task)",
+            "done tasks": "!(match &self (taskStatus $task Completed) $task)",
+
+            "high priority tasks": "!(match &self (task $task Description $desc Deadline $deadline Priority High Dependencies $deps) $task)",
+            "urgent tasks": "!(match &self (task $task Description $desc Deadline $deadline Priority High Dependencies $deps) $task)",
+
+            "tasks due today": "!(getTasksDueToday)",
+            "today's tasks": "!(getTasksDueToday)",
+
+            "productivity insights": "!(getProductivityInsights)",
+            "how am i doing": "!(getProductivityInsights)",
+            "progress report": "!(getProductivityInsights)",
+        }
+
+        # Find matching pattern
+        for pattern, query in patterns.items():
+            if pattern in question:
+                return query
+
+        # Handle dependency questions
+        if "dependencies" in question:
+            # Try to extract task ID from question
+            words = question.split()
+            for word in words:
+                if word.startswith("task") and len(word) > 4:
+                    task_id = word.capitalize()
+                    return f"!(getDependencies {task_id})"
+            return "!(match &self (task $task Description $desc Deadline $deadline Priority $priority Dependencies $deps) ($task $deps))"
+
+        return None
+
+    def _generate_natural_answer(self, question: str, metta_result: Dict) -> str:
+        """Generate natural language answer from MeTTa result"""
+        if not metta_result.get("success"):
+            return "I couldn't process that question. Please try asking about tasks, scheduling, or dependencies."
+
+        processed = metta_result.get("processed_result", "")
+
+        # Add context based on question type
+        if "next task" in question.lower():
+            return f"🤖 Based on my analysis of your tasks, dependencies, and priorities: {processed}"
+        elif "overdue" in question.lower():
+            return f"⚠️ Here's what I found about overdue tasks: {processed}"
+        elif "schedule" in question.lower() or "order" in question.lower():
+            return f"📋 I've calculated the optimal task sequence: {processed}"
+        elif "all tasks" in question.lower() or "list" in question.lower():
+            return f"📝 Here are your current tasks: {processed}"
+        else:
+            return f"🧠 {processed}"

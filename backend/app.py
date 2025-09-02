@@ -219,6 +219,49 @@ def get_optimal_order():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route('/api/metta-query', methods=['POST'])
+def execute_metta_query():
+    """Execute raw MeTTa query with debug output"""
+    try:
+        if not metta_bridge:
+            return jsonify({"error": "MeTTa bridge not initialized"}), 500
+
+        data = request.get_json()
+        query = data.get('query', '')
+
+        if not query:
+            return jsonify({"success": False, "error": "Query is required"}), 400
+
+        result = metta_bridge.execute_metta_query(query)
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/ask-metta', methods=['POST'])
+def ask_metta_brain():
+    """Ask MeTTa brain a natural language question"""
+    try:
+        if not metta_bridge:
+            return jsonify({"error": "MeTTa bridge not initialized"}), 500
+
+        data = request.get_json()
+        question = data.get('question', '')
+
+        if not question:
+            return jsonify({"success": False, "error": "Question is required"}), 400
+
+        result = metta_bridge.ask_metta_brain(question)
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/chat')
+def chat_page():
+    """Serve the MeTTa chat interface"""
+    return render_template('chat.html')
+
 @app.route('/api/dependencies/<task_id>', methods=['GET'])
 def get_task_dependencies(task_id):
     """Get dependencies for a specific task"""
