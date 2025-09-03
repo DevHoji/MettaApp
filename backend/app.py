@@ -16,7 +16,7 @@ import json
 # Add the parent directory to the path to import metta_bridge
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from backend.metta_bridge import MeTTaBridge
+from backend.minimal_metta_bridge import MinimalMeTTaBridge
 
 # Initialize Flask app
 app = Flask(__name__,
@@ -24,12 +24,12 @@ app = Flask(__name__,
            static_folder='../frontend/static')
 CORS(app)
 
-# Initialize MeTTa bridge
+# Initialize Pure MeTTa Brain - ALL LOGIC IN METTA
 try:
-    metta_bridge = MeTTaBridge()
-    print("MeTTa bridge initialized successfully")
+    metta_bridge = MinimalMeTTaBridge()
+    print("Pure MeTTa brain initialized successfully - ALL intelligence in MeTTa")
 except Exception as e:
-    print(f"Error initializing MeTTa bridge: {e}")
+    print(f"Error initializing Pure MeTTa brain: {e}")
     metta_bridge = None
 
 @app.route('/')
