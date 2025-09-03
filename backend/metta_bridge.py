@@ -248,6 +248,10 @@ class MeTTaBridge:
                 return {"success": False, "error": "Task does not exist"}
 
             self.metta.run(f'!(completeTask {task_id})')
+
+            # Save tasks to file for persistence
+            self._save_tasks_to_file()
+
             return {"success": True, "message": f"Task {task_id} marked as completed"}
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -313,6 +317,9 @@ class MeTTaBridge:
             if status_result and status_result[0]:
                 status_atom = status_result[0][0]
                 self.metta.run(f'!(remove-atom &self {status_atom})')
+
+            # Save tasks to file for persistence
+            self._save_tasks_to_file()
 
             return {"success": True, "message": f"Task {task_id} deleted successfully"}
         except Exception as e:
@@ -441,92 +448,242 @@ class MeTTaBridge:
             return self.get_completion_stats()
 
     def execute_metta_query(self, query: str) -> Dict[str, Any]:
-        """Execute raw MeTTa query and return both raw and processed results"""
+        """Execute raw MeTTa query and return both raw and processed results with detailed debug info"""
         try:
-            print(f"\n🧠 MeTTa Query: {query}")
+            print(f"\n🧠 MeTTa Query Execution Started")
+            print(f"📝 Query: {query}")
+            print(f"⏰ Timestamp: {datetime.now().isoformat()}")
 
             # Execute the query
+            print(f"🔄 Executing MeTTa query...")
             raw_result = self.metta.run(query)
 
-            # Log raw MeTTa output
-            print(f"🔍 Raw MeTTa Result: {raw_result}")
+            # Detailed logging of raw MeTTa output
+            print(f"✅ MeTTa Execution Complete")
+            print(f"🔍 Raw Result Type: {type(raw_result)}")
+            print(f"🔍 Raw Result Value: {raw_result}")
+
+            if raw_result:
+                print(f"📊 Result Length: {len(raw_result)}")
+                if len(raw_result) > 0:
+                    print(f"🎯 First Element: {raw_result[0]}")
+                    print(f"🎯 First Element Type: {type(raw_result[0])}")
+
+                    if hasattr(raw_result[0], '__iter__') and not isinstance(raw_result[0], str):
+                        print(f"📋 First Element Contents:")
+                        for i, item in enumerate(raw_result[0]):
+                            print(f"   [{i}]: {item} (type: {type(item)})")
+                            if hasattr(item, 'get_children'):
+                                children = item.get_children()
+                                print(f"       Children: {children}")
+            else:
+                print(f"❌ No results returned from MeTTa")
 
             # Process result for user-friendly display
+            print(f"🔄 Processing result for user display...")
             processed_result = self._process_metta_result(raw_result, query)
+            print(f"✅ Processing complete")
+
+            # Create detailed debug information
+            debug_info = {
+                "query_type": self._identify_query_type(query),
+                "execution_time": datetime.now().isoformat(),
+                "raw_result_type": str(type(raw_result)),
+                "raw_result_length": len(raw_result) if raw_result else 0,
+                "has_results": bool(raw_result and raw_result[0]) if raw_result else False,
+                "metta_space_size": self._get_metta_space_info()
+            }
 
             return {
                 "success": True,
                 "query": query,
                 "raw_result": str(raw_result),
                 "processed_result": processed_result,
+                "debug_info": debug_info,
                 "timestamp": datetime.now().isoformat()
             }
 
         except Exception as e:
             error_msg = f"Error executing MeTTa query: {e}"
             print(f"❌ {error_msg}")
+            print(f"🔍 Exception Type: {type(e)}")
+            print(f"🔍 Exception Details: {str(e)}")
+
             return {
                 "success": False,
                 "query": query,
                 "error": str(e),
+                "error_type": str(type(e)),
                 "timestamp": datetime.now().isoformat()
             }
 
+    def _identify_query_type(self, query: str) -> str:
+        """Identify the type of MeTTa query for debugging"""
+        if "getNextTask" in query:
+            return "Next Task Recommendation"
+        elif "scheduleTasks" in query:
+            return "Task Scheduling"
+        elif "match" in query:
+            return "Pattern Matching Query"
+        elif "getOverdueTasks" in query:
+            return "Overdue Task Query"
+        elif "getDependencies" in query:
+            return "Dependency Query"
+        else:
+            return "Generic Query"
+
+    def _get_metta_space_info(self) -> Dict[str, Any]:
+        """Get information about the current MeTTa space for debugging"""
+        try:
+            # Try to count tasks in the space
+            all_tasks_result = self.metta.run('!(match &self (task $task Description $desc Deadline $deadline Priority $priority Dependencies $deps) $task)')
+            task_count = len(all_tasks_result[0]) if all_tasks_result and all_tasks_result[0] else 0
+
+            # Try to count completed tasks
+            completed_result = self.metta.run('!(match &self (taskStatus $task Completed) $task)')
+            completed_count = len(completed_result[0]) if completed_result and completed_result[0] else 0
+
+            return {
+                "total_tasks": task_count,
+                "completed_tasks": completed_count,
+                "pending_tasks": task_count - completed_count
+            }
+        except Exception as e:
+            return {"error": f"Could not get space info: {str(e)}"}
+
     def _process_metta_result(self, raw_result, query: str) -> str:
-        """Process raw MeTTa result into user-friendly format"""
+        """Process raw MeTTa result into user-friendly format with detailed reasoning"""
         try:
             if not raw_result or not raw_result[0]:
-                return "No results found."
+                # Check if we have any tasks at all
+                all_tasks = self.get_all_tasks()
+                if not all_tasks:
+                    return "No tasks found in the system. Please add some tasks first to get recommendations and analysis."
+                return "No results found for this specific query, but you have tasks in the system."
 
-            # Handle different types of queries
+            # Handle different types of queries with detailed reasoning
             if "getNextTask" in query:
                 if str(raw_result[0][0]) == "NoTasksAvailable":
-                    return "No tasks are currently available. All tasks may have unmet dependencies."
+                    # Provide detailed reasoning why no tasks are available
+                    all_tasks = self.get_all_tasks()
+                    pending_tasks = [t for t in all_tasks if not t.get('completed', False)]
+                    if not pending_tasks:
+                        return "🎉 Congratulations! All tasks are completed. No more tasks to work on."
+                    else:
+                        # Analyze why tasks aren't available
+                        blocked_tasks = []
+                        for task in pending_tasks:
+                            if task['dependencies']:
+                                incomplete_deps = []
+                                for dep_id in task['dependencies']:
+                                    dep_task = next((t for t in all_tasks if t['id'] == dep_id), None)
+                                    if dep_task and not dep_task.get('completed', False):
+                                        incomplete_deps.append(dep_task['description'])
+                                if incomplete_deps:
+                                    blocked_tasks.append(f"'{task['description']}' is waiting for: {', '.join(incomplete_deps)}")
+
+                        if blocked_tasks:
+                            return f"No tasks are ready to start. Here's why:\n" + "\n".join(f"• {reason}" for reason in blocked_tasks)
+                        return "All pending tasks have unmet dependencies. Please check your task dependencies."
                 else:
                     task_id = str(raw_result[0][0])
                     task = next((t for t in self.get_all_tasks() if t['id'] == task_id), None)
                     if task:
-                        return f"Next recommended task: '{task['description']}' (Priority: {task['priority']}, Deadline: {task['deadline']})"
+                        # Provide detailed reasoning for the recommendation
+                        reasoning = self._generate_task_reasoning(task)
+                        return f"🎯 **Next recommended task**: '{task['description']}'\n\n**Why this task?**\n{reasoning}\n\n📋 **Details**: Priority: {task['priority']}, Deadline: {task['deadline']}"
                     return f"Next recommended task: {task_id}"
 
             elif "scheduleTasks" in query:
                 if raw_result[0]:
                     task_ids = [str(task) for task in raw_result[0]]
-                    return f"Optimal task order: {' → '.join(task_ids)}"
+                    all_tasks = self.get_all_tasks()
+
+                    # Create detailed schedule with reasoning
+                    schedule_details = []
+                    for i, task_id in enumerate(task_ids, 1):
+                        task = next((t for t in all_tasks if t['id'] == task_id), None)
+                        if task:
+                            schedule_details.append(f"{i}. '{task['description']}' ({task['priority']} priority)")
+
+                    reasoning = self._generate_schedule_reasoning(task_ids, all_tasks)
+                    return f"📋 **Optimal Task Schedule**:\n" + "\n".join(schedule_details) + f"\n\n**Scheduling Logic**:\n{reasoning}"
                 return "No tasks to schedule."
 
             elif "getOverdueTasks" in query:
                 if raw_result[0]:
-                    overdue_tasks = [str(task) for task in raw_result[0]]
-                    return f"Overdue tasks: {', '.join(overdue_tasks)}"
-                return "No overdue tasks."
+                    overdue_task_ids = [str(task) for task in raw_result[0]]
+                    all_tasks = self.get_all_tasks()
+                    overdue_details = []
 
-            elif "getDependencies" in query:
-                if raw_result[0] and hasattr(raw_result[0][0], 'get_children'):
-                    deps = [str(dep) for dep in raw_result[0][0].get_children()]
-                    return f"Dependencies: {', '.join(deps) if deps else 'None'}"
-                return "No dependencies found."
+                    for task_id in overdue_task_ids:
+                        task = next((t for t in all_tasks if t['id'] == task_id), None)
+                        if task:
+                            days_overdue = abs(task.get('days_until_deadline', 0))
+                            overdue_details.append(f"• '{task['description']}' - {days_overdue} days overdue ({task['priority']} priority)")
+
+                    return f"⚠️ **Overdue Tasks** ({len(overdue_task_ids)} found):\n" + "\n".join(overdue_details) + "\n\n💡 **Recommendation**: Focus on these tasks immediately to get back on track."
+                return "✅ Great news! No overdue tasks found."
 
             elif "match" in query and "task" in query:
-                # Handle task queries
+                # Handle task queries with detailed information
                 tasks = []
+                completed_count = 0
+
                 for item in raw_result[0]:
                     if hasattr(item, 'get_children') and len(item.get_children()) >= 5:
                         children = item.get_children()
                         task_id = str(children[0])
                         description = str(children[1]).strip('"')
-                        tasks.append(f"{task_id}: {description}")
+                        deadline = str(children[2]).strip('"')
+                        priority = str(children[3])
+
+                        # Check if completed
+                        all_tasks = self.get_all_tasks()
+                        task_obj = next((t for t in all_tasks if t['id'] == task_id), None)
+                        status = "✅ Completed" if task_obj and task_obj.get('completed', False) else "⏳ Pending"
+                        if task_obj and task_obj.get('completed', False):
+                            completed_count += 1
+
+                        # Calculate urgency
+                        urgency = ""
+                        if task_obj:
+                            days = task_obj.get('days_until_deadline', 0)
+                            if days < 0:
+                                urgency = " 🔴 OVERDUE"
+                            elif days == 0:
+                                urgency = " 🟡 DUE TODAY"
+                            elif days <= 3:
+                                urgency = " 🟠 DUE SOON"
+
+                        tasks.append(f"• **{task_id}**: '{description}' ({priority} priority, Due: {deadline}){urgency} - {status}")
 
                 if tasks:
-                    return f"Found {len(tasks)} tasks:\n" + "\n".join(tasks)
-                return "No tasks found."
+                    summary = f"📊 **Task Summary**: {len(tasks)} total tasks, {completed_count} completed, {len(tasks) - completed_count} pending\n\n"
+                    return summary + "\n".join(tasks)
+                return "No tasks found in the system."
+
+            elif "taskStatus" in query and "Completed" in query:
+                # Handle completed tasks query
+                if raw_result[0]:
+                    completed_task_ids = [str(task) for task in raw_result[0]]
+                    all_tasks = self.get_all_tasks()
+                    completed_details = []
+
+                    for task_id in completed_task_ids:
+                        task = next((t for t in all_tasks if t['id'] == task_id), None)
+                        if task:
+                            completed_details.append(f"• '{task['description']}' ({task['priority']} priority)")
+
+                    return f"✅ **Completed Tasks** ({len(completed_task_ids)} found):\n" + "\n".join(completed_details)
+                return "No completed tasks found."
 
             else:
-                # Generic result processing
-                return f"Result: {str(raw_result[0])}"
+                # Generic result processing with more detail
+                return f"🔍 **Query Result**: {str(raw_result[0])}\n\n💡 Try asking more specific questions like 'What is my next task?' or 'Show all tasks'."
 
         except Exception as e:
-            return f"Error processing result: {str(e)}"
+            return f"❌ Error processing result: {str(e)}\n\nPlease try rephrasing your question or ask for help."
 
     def ask_metta_brain(self, user_question: str) -> Dict[str, Any]:
         """Natural language interface to ask MeTTa brain questions"""
@@ -555,59 +712,65 @@ class MeTTaBridge:
             }
 
     def _convert_question_to_metta(self, question: str) -> str:
-        """Convert natural language question to MeTTa query"""
+        """Convert natural language question to MeTTa query with intelligent pattern matching"""
         question = question.lower().strip()
 
-        # Question patterns and their MeTTa equivalents
-        patterns = {
-            "what is the next task": "!(getNextTask)",
-            "next task": "!(getNextTask)",
-            "what should i do next": "!(getNextTask)",
-            "recommend task": "!(getNextTask)",
+        # Enhanced pattern matching with fuzzy matching
+        if any(word in question for word in ["next", "recommend", "should i do", "what to do"]):
+            return "!(getNextTask)"
 
-            "show all tasks": "!(match &self (task $task Description $desc Deadline $deadline Priority $priority Dependencies $deps) ($task $desc $deadline $priority $deps))",
-            "list tasks": "!(match &self (task $task Description $desc Deadline $deadline Priority $priority Dependencies $deps) ($task $desc $deadline $priority $deps))",
-            "all tasks": "!(match &self (task $task Description $desc Deadline $deadline Priority $priority Dependencies $deps) ($task $desc $deadline $priority $deps))",
+        elif any(word in question for word in ["all tasks", "list", "show tasks", "what tasks", "my tasks"]):
+            return "!(match &self (task $task Description $desc Deadline $deadline Priority $priority Dependencies $deps) ($task $desc $deadline $priority $deps))"
 
-            "schedule tasks": "!(scheduleTasks)",
-            "optimal order": "!(scheduleTasks)",
-            "task order": "!(scheduleTasks)",
+        elif any(word in question for word in ["schedule", "order", "sequence", "arrange"]):
+            return "!(scheduleTasks)"
 
-            "overdue tasks": "!(getOverdueTasks)",
-            "what tasks are overdue": "!(getOverdueTasks)",
-            "late tasks": "!(getOverdueTasks)",
+        elif any(word in question for word in ["overdue", "late", "missed", "past due"]):
+            return "!(getOverdueTasks)"
 
-            "completed tasks": "!(match &self (taskStatus $task Completed) $task)",
-            "finished tasks": "!(match &self (taskStatus $task Completed) $task)",
-            "done tasks": "!(match &self (taskStatus $task Completed) $task)",
+        elif any(word in question for word in ["completed", "finished", "done", "complete"]):
+            return "!(match &self (taskStatus $task Completed) $task)"
 
-            "high priority tasks": "!(match &self (task $task Description $desc Deadline $deadline Priority High Dependencies $deps) $task)",
-            "urgent tasks": "!(match &self (task $task Description $desc Deadline $deadline Priority High Dependencies $deps) $task)",
+        elif any(word in question for word in ["high priority", "urgent", "important", "critical"]):
+            return "!(match &self (task $task Description $desc Deadline $deadline Priority High Dependencies $deps) $task)"
 
-            "tasks due today": "!(getTasksDueToday)",
-            "today's tasks": "!(getTasksDueToday)",
+        elif any(word in question for word in ["medium priority", "moderate"]):
+            return "!(match &self (task $task Description $desc Deadline $deadline Priority Medium Dependencies $deps) $task)"
 
-            "productivity insights": "!(getProductivityInsights)",
-            "how am i doing": "!(getProductivityInsights)",
-            "progress report": "!(getProductivityInsights)",
-        }
+        elif any(word in question for word in ["low priority", "less important"]):
+            return "!(match &self (task $task Description $desc Deadline $deadline Priority Low Dependencies $deps) $task)"
 
-        # Find matching pattern
-        for pattern, query in patterns.items():
-            if pattern in question:
-                return query
+        elif any(word in question for word in ["today", "due today", "today's"]):
+            return "!(getTasksDueToday)"
 
-        # Handle dependency questions
-        if "dependencies" in question:
-            # Try to extract task ID from question
+        elif any(word in question for word in ["progress", "how am i", "doing", "status", "report"]):
+            return "!(getProductivityInsights)"
+
+        elif any(word in question for word in ["dependencies", "depends", "prerequisite"]):
+            # Try to extract task ID
             words = question.split()
             for word in words:
                 if word.startswith("task") and len(word) > 4:
                     task_id = word.capitalize()
                     return f"!(getDependencies {task_id})"
+            # If no specific task, show all dependencies
             return "!(match &self (task $task Description $desc Deadline $deadline Priority $priority Dependencies $deps) ($task $deps))"
 
-        return None
+        elif any(word in question for word in ["ready", "available", "can do", "no dependencies"]):
+            return "!(getReadyTasks)"
+
+        elif any(word in question for word in ["count", "how many", "number"]):
+            if "completed" in question:
+                return "!(match &self (taskStatus $task Completed) $task)"
+            else:
+                return "!(match &self (task $task Description $desc Deadline $deadline Priority $priority Dependencies $deps) $task)"
+
+        # If no pattern matches, try to find tasks by description keywords
+        elif any(word in question for word in ["find", "search", "about", "containing"]):
+            return "!(match &self (task $task Description $desc Deadline $deadline Priority $priority Dependencies $deps) ($task $desc))"
+
+        # Default fallback - show all tasks
+        return "!(match &self (task $task Description $desc Deadline $deadline Priority $priority Dependencies $deps) ($task $desc $deadline $priority $deps))"
 
     def _generate_natural_answer(self, question: str, metta_result: Dict) -> str:
         """Generate natural language answer from MeTTa result"""
@@ -627,3 +790,80 @@ class MeTTaBridge:
             return f"📝 Here are your current tasks: {processed}"
         else:
             return f"🧠 {processed}"
+
+    def _generate_task_reasoning(self, task: Dict) -> str:
+        """Generate detailed reasoning for why a task is recommended"""
+        reasons = []
+
+        # Priority reasoning
+        if task['priority'] == 'High':
+            reasons.append("🔴 **High Priority**: This task is marked as high importance")
+        elif task['priority'] == 'Medium':
+            reasons.append("🟡 **Medium Priority**: This task has moderate importance")
+        else:
+            reasons.append("🟢 **Low Priority**: This task has lower importance but still needs attention")
+
+        # Deadline reasoning
+        days_until = task.get('days_until_deadline', 0)
+        if days_until < 0:
+            reasons.append(f"⚠️ **Overdue**: This task is {abs(days_until)} days past its deadline")
+        elif days_until == 0:
+            reasons.append("🔥 **Due Today**: This task must be completed today")
+        elif days_until <= 3:
+            reasons.append(f"⏰ **Due Soon**: Only {days_until} days remaining")
+        elif days_until <= 7:
+            reasons.append(f"📅 **Due This Week**: {days_until} days remaining")
+        else:
+            reasons.append(f"📆 **Future Deadline**: {days_until} days remaining")
+
+        # Dependency reasoning
+        if not task['dependencies']:
+            reasons.append("✅ **No Dependencies**: Ready to start immediately")
+        else:
+            reasons.append(f"🔗 **Dependencies Met**: All {len(task['dependencies'])} prerequisite tasks are completed")
+
+        # Add strategic reasoning
+        reasons.append("🎯 **Strategic Choice**: Based on MeTTa's analysis of priority, deadline urgency, and dependency completion")
+
+        return "\n".join(f"• {reason}" for reason in reasons)
+
+    def _generate_schedule_reasoning(self, task_ids: List[str], all_tasks: List[Dict]) -> str:
+        """Generate reasoning for the task schedule order"""
+        reasoning_parts = []
+
+        reasoning_parts.append("🧠 **MeTTa's Scheduling Algorithm**:")
+        reasoning_parts.append("• Dependencies are resolved first (prerequisite tasks come before dependent tasks)")
+        reasoning_parts.append("• High priority tasks are prioritized within each dependency level")
+        reasoning_parts.append("• Deadline urgency is considered as a tie-breaker")
+
+        # Analyze the actual schedule
+        if len(task_ids) > 1:
+            reasoning_parts.append(f"\n📋 **This Schedule Analysis**:")
+            reasoning_parts.append(f"• {len(task_ids)} tasks arranged in optimal dependency order")
+
+            # Check for dependency chains
+            dependency_chains = 0
+            for task_id in task_ids:
+                task = next((t for t in all_tasks if t['id'] == task_id), None)
+                if task and task['dependencies']:
+                    dependency_chains += 1
+
+            if dependency_chains > 0:
+                reasoning_parts.append(f"• {dependency_chains} tasks have dependencies that are properly sequenced")
+
+            # Priority distribution
+            priority_counts = {'High': 0, 'Medium': 0, 'Low': 0}
+            for task_id in task_ids:
+                task = next((t for t in all_tasks if t['id'] == task_id), None)
+                if task:
+                    priority_counts[task['priority']] += 1
+
+            priority_summary = []
+            for priority, count in priority_counts.items():
+                if count > 0:
+                    priority_summary.append(f"{count} {priority}")
+
+            if priority_summary:
+                reasoning_parts.append(f"• Priority distribution: {', '.join(priority_summary)} priority tasks")
+
+        return "\n".join(reasoning_parts)

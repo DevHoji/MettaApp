@@ -82,16 +82,27 @@ class MeTTaChat {
             this.hideLoading();
 
             if (response.success) {
-                // Add bot response
-                this.addMessage(response.natural_answer || response.processed_result, 'bot');
+                // Add bot response with enhanced formatting
+                const botMessage = response.natural_answer || response.processed_result || "I processed your request successfully.";
+                this.addMessage(botMessage, 'bot');
 
                 // Show debug output if enabled
-                if (this.debugMode && response.raw_result) {
+                if (this.debugMode) {
                     this.updateDebugPanel(response);
                     this.addDebugToMessage(response);
                 }
             } else {
-                this.addMessage(`❌ Error: ${response.error}`, 'bot');
+                this.addMessage(`❌ Error: ${response.error || 'Unknown error occurred'}`, 'bot');
+
+                // Show error debug info if available
+                if (this.debugMode && response.error_type) {
+                    this.updateDebugPanel({
+                        query: message,
+                        raw_result: `Error: ${response.error}`,
+                        error_type: response.error_type,
+                        timestamp: response.timestamp
+                    });
+                }
             }
 
         } catch (error) {
@@ -153,32 +164,67 @@ class MeTTaChat {
 
         const debugOutput = document.createElement('div');
         debugOutput.className = 'debug-output';
-        debugOutput.innerHTML = `
+
+        let debugHtml = `
             <span class="debug-label">🔍 MeTTa Query:</span>
             ${this.escapeHtml(response.query || 'N/A')}
-            
+
             <span class="debug-label">🧠 Raw MeTTa Result:</span>
             ${this.escapeHtml(response.raw_result || 'N/A')}
         `;
 
+        // Add debug info if available
+        if (response.debug_info) {
+            debugHtml += `
+                <span class="debug-label">📊 Debug Info:</span>
+                Query Type: ${this.escapeHtml(response.debug_info.query_type || 'Unknown')}
+                Has Results: ${response.debug_info.has_results ? 'Yes' : 'No'}
+                MeTTa Space: ${JSON.stringify(response.debug_info.metta_space_size || {})}
+            `;
+        }
+
+        debugOutput.innerHTML = debugHtml;
         messageText.appendChild(debugOutput);
     }
 
     updateDebugPanel(response) {
         const debugContent = document.getElementById('debug-content');
         const timestamp = new Date().toLocaleTimeString();
-        
+
         const debugEntry = document.createElement('div');
-        debugEntry.innerHTML = `
-            <div style="color: #ffff00; margin-bottom: 0.5rem;">[${timestamp}] New Query</div>
-            <div style="color: #00ffff;">Query: ${this.escapeHtml(response.query || 'N/A')}</div>
-            <div style="color: #00ff00; margin-top: 0.5rem;">Raw Result:</div>
-            <div style="margin-left: 1rem; color: #90ee90;">${this.escapeHtml(response.raw_result || 'N/A')}</div>
-            <div style="color: #ffa500; margin-top: 0.5rem;">Processed:</div>
-            <div style="margin-left: 1rem; color: #ffb347;">${this.escapeHtml(response.processed_result || 'N/A')}</div>
-            <hr style="border-color: #333; margin: 1rem 0;">
+
+        let debugHtml = `
+            <div style="color: #ffff00; margin-bottom: 0.5rem; font-weight: bold;">[${timestamp}] MeTTa Query Execution</div>
+            <div style="color: #00ffff;">📝 Query: ${this.escapeHtml(response.query || 'N/A')}</div>
         `;
 
+        // Add debug info if available
+        if (response.debug_info) {
+            debugHtml += `
+                <div style="color: #ff69b4; margin-top: 0.5rem;">🔍 Query Type: ${this.escapeHtml(response.debug_info.query_type || 'Unknown')}</div>
+                <div style="color: #87ceeb;">📊 Has Results: ${response.debug_info.has_results ? '✅ Yes' : '❌ No'}</div>
+                <div style="color: #dda0dd;">🗃️ MeTTa Space: ${JSON.stringify(response.debug_info.metta_space_size || {}, null, 2)}</div>
+            `;
+        }
+
+        debugHtml += `
+            <div style="color: #00ff00; margin-top: 0.5rem;">🧠 Raw MeTTa Result:</div>
+            <div style="margin-left: 1rem; color: #90ee90; font-family: monospace; background: #0a0a0a; padding: 0.5rem; border-radius: 4px;">${this.escapeHtml(response.raw_result || 'N/A')}</div>
+            <div style="color: #ffa500; margin-top: 0.5rem;">📋 Processed Result:</div>
+            <div style="margin-left: 1rem; color: #ffb347;">${this.escapeHtml(response.processed_result || 'N/A')}</div>
+        `;
+
+        // Add error info if present
+        if (response.error) {
+            debugHtml += `
+                <div style="color: #ff6b6b; margin-top: 0.5rem;">❌ Error:</div>
+                <div style="margin-left: 1rem; color: #ff9999;">${this.escapeHtml(response.error)}</div>
+            `;
+        }
+
+        debugHtml += `<hr style="border-color: #333; margin: 1rem 0;">`;
+
+        debugEntry.innerHTML = debugHtml;
         debugContent.appendChild(debugEntry);
         debugContent.scrollTop = debugContent.scrollHeight;
     }

@@ -298,18 +298,31 @@ if __name__ == '__main__':
     print("Starting Smart To-Do Task Scheduler Backend...")
     print("MeTTa Bridge Status:", "Initialized" if metta_bridge else "Not Initialized")
 
-    # Add some sample tasks for demonstration
+    # Add some sample tasks for demonstration if no tasks exist
     if metta_bridge:
-        print("Adding sample tasks...")
-        try:
-            # Sample tasks with dependencies
-            metta_bridge.add_task("Plan project structure", "2024-01-15", "High", [])
-            metta_bridge.add_task("Set up development environment", "2024-01-16", "High", ["Task1"])
-            metta_bridge.add_task("Implement core features", "2024-01-20", "Medium", ["Task2"])
-            metta_bridge.add_task("Write tests", "2024-01-22", "Medium", ["Task3"])
-            metta_bridge.add_task("Deploy application", "2024-01-25", "Low", ["Task4"])
-            print("Sample tasks added successfully")
-        except Exception as e:
-            print(f"Error adding sample tasks: {e}")
+        existing_tasks = metta_bridge.get_all_tasks()
+        if not existing_tasks:
+            print("No existing tasks found. Adding sample tasks for demonstration...")
+            try:
+                # Sample tasks with dependencies and realistic dates
+                from datetime import datetime, timedelta
+                today = datetime.now()
+
+                # Create tasks with dates relative to today
+                metta_bridge.add_task("Plan project structure", (today + timedelta(days=1)).strftime("%Y-%m-%d"), "High", [])
+                metta_bridge.add_task("Set up development environment", (today + timedelta(days=3)).strftime("%Y-%m-%d"), "High", ["Task1"])
+                metta_bridge.add_task("Implement core features", (today + timedelta(days=7)).strftime("%Y-%m-%d"), "Medium", ["Task2"])
+                metta_bridge.add_task("Write tests", (today + timedelta(days=10)).strftime("%Y-%m-%d"), "Medium", ["Task3"])
+                metta_bridge.add_task("Deploy application", (today + timedelta(days=14)).strftime("%Y-%m-%d"), "Low", ["Task4"])
+
+                # Add some overdue tasks for testing
+                metta_bridge.add_task("Review documentation", (today - timedelta(days=2)).strftime("%Y-%m-%d"), "Medium", [])
+                metta_bridge.add_task("Update README", (today - timedelta(days=1)).strftime("%Y-%m-%d"), "Low", [])
+
+                print("Sample tasks added successfully with realistic dates")
+            except Exception as e:
+                print(f"Error adding sample tasks: {e}")
+        else:
+            print(f"Found {len(existing_tasks)} existing tasks, skipping sample data creation")
 
     app.run(debug=True, host='0.0.0.0', port=5000)
