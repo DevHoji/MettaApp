@@ -1,17 +1,6 @@
 {
-  "task_counter": 8,
+  "task_counter": 11,
   "tasks": [
-    {
-      "id": "Task2",
-      "description": "Set up development environment",
-      "deadline": "2025-09-08",
-      "priority": "High",
-      "dependencies": [
-        "Task1"
-      ],
-      "completed": false,
-      "days_until_deadline": 4
-    },
     {
       "id": "Task5",
       "description": "Deploy application",
@@ -22,33 +11,6 @@
       ],
       "completed": false,
       "days_until_deadline": 19
-    },
-    {
-      "id": "Task7",
-      "description": "Update README",
-      "deadline": "2025-08-31",
-      "priority": "Low",
-      "dependencies": [],
-      "completed": false,
-      "days_until_deadline": -4
-    },
-    {
-      "id": "Task1",
-      "description": "Plan project structure",
-      "deadline": "2025-09-05",
-      "priority": "High",
-      "dependencies": [],
-      "completed": false,
-      "days_until_deadline": 1
-    },
-    {
-      "id": "Task6",
-      "description": "Review documentation",
-      "deadline": "2025-09-02",
-      "priority": "Medium",
-      "dependencies": [],
-      "completed": false,
-      "days_until_deadline": -2
     },
     {
       "id": "Task3",
@@ -62,6 +24,35 @@
       "days_until_deadline": 9
     },
     {
+      "id": "Task7",
+      "description": "Update README",
+      "deadline": "2025-08-31",
+      "priority": "Low",
+      "dependencies": [],
+      "completed": false,
+      "days_until_deadline": -4
+    },
+    {
+      "id": "Task6",
+      "description": "Review documentation",
+      "deadline": "2025-09-02",
+      "priority": "Medium",
+      "dependencies": [],
+      "completed": false,
+      "days_until_deadline": -2
+    },
+    {
+      "id": "Task2",
+      "description": "Set up development environment",
+      "deadline": "2025-09-08",
+      "priority": "High",
+      "dependencies": [
+        "Task1"
+      ],
+      "completed": true,
+      "days_until_deadline": 4
+    },
+    {
       "id": "Task4",
       "description": "Write tests",
       "deadline": "2025-09-18",
@@ -73,6 +64,37 @@
       "days_until_deadline": 14
     },
     {
+      "id": "Task10",
+      "description": "fdakhf",
+      "deadline": "2025-09-04",
+      "priority": "Medium",
+      "dependencies": [
+        "Task3"
+      ],
+      "completed": false,
+      "days_until_deadline": 0
+    },
+    {
+      "id": "Task11",
+      "description": "import",
+      "deadline": "2025-09-04",
+      "priority": "Low",
+      "dependencies": [],
+      "completed": false,
+      "days_until_deadline": 0
+    },
+    {
+      "id": "Task9",
+      "description": "what",
+      "deadline": "2025-09-04",
+      "priority": "High",
+      "dependencies": [
+        "Task3"
+      ],
+      "completed": true,
+      "days_until_deadline": 0
+    },
+    {
       "id": "Task8",
       "description": "whatesa",
       "deadline": "2025-09-04",
@@ -82,6 +104,15 @@
       ],
       "completed": true,
       "days_until_deadline": 0
+    },
+    {
+      "id": "Task1",
+      "description": "Plan project structure",
+      "deadline": "2025-09-05",
+      "priority": "High",
+      "dependencies": [],
+      "completed": false,
+      "days_until_deadline": 1
     }
   ]
 }

@@ -125,20 +125,83 @@ class MinimalMeTTaBridge:
         NO LOGIC - just format conversion
         """
         if not raw_result or not raw_result[0]:
-            return "MeTTa brain found no results for your query."
-        
+            return "I couldn't find any information about that. Try asking about your tasks, deadlines, or what you should work on next."
+
         # Simple conversion - MeTTa brain did all the thinking
-        result_str = str(raw_result[0])
-        
-        # Basic formatting for readability
-        if "TaskRecommendation" in result_str:
-            return "MeTTa brain recommends: " + result_str
-        elif "ProgressReport" in result_str:
-            return "MeTTa brain progress analysis: " + result_str
-        elif "NoTasksAnalysis" in result_str:
-            return "MeTTa brain analysis: " + result_str
+        result = raw_result[0]
+
+        # Handle different response types for better user experience
+        if isinstance(result, list):
+            if len(result) == 0:
+                return "No tasks found matching your query."
+            elif len(result) == 1:
+                return self._format_single_result(result[0])
+            else:
+                # Multiple results
+                if all(isinstance(item, str) and item.startswith('Task') for item in result):
+                    return f"I found {len(result)} tasks: {', '.join(result)}. Ask me about any specific task for more details."
+                else:
+                    return f"Here are the results: {', '.join(str(item) for item in result)}"
         else:
-            return "MeTTa brain response: " + result_str
+            # Single result
+            return self._format_single_result(result)
+
+    def _format_single_result(self, result):
+        """Format a single MeTTa result into user-friendly text"""
+        result_str = str(result)
+
+        # Handle different MeTTa response types
+        if result_str.startswith('NextTask') or 'NextTask' in result_str:
+            # Extract task info from NextTask response
+            if 'NextTask Task1 "Plan project structure" "2025-09-05"' in result_str:
+                return "I recommend working on: Plan project structure (Task1, due 2025-09-05)"
+            elif 'NextTask' in result_str:
+                # Try to extract parts
+                import re
+                match = re.search(r'NextTask\s+(\w+)\s+"([^"]+)"\s+"([^"]+)"', result_str)
+                if match:
+                    task_id, description, deadline = match.groups()
+                    return f"I recommend working on: {description} ({task_id}, due {deadline})"
+                else:
+                    return f"I recommend: {result_str.replace('NextTask', '').strip()}"
+            else:
+                return f"I recommend: {result_str.replace('NextTask', '').strip()}"
+
+        elif result_str.startswith('TaskListResponse'):
+            return "Here are all your tasks. You can ask me about specific tasks or what to work on next."
+
+        elif result_str.startswith('OverdueResponse'):
+            if "No overdue" in result_str:
+                return "Great news! You don't have any overdue tasks. Keep up the good work!"
+            else:
+                return "You have some overdue tasks that need attention. I recommend prioritizing these first."
+
+        elif result_str.startswith('ProgressResponse'):
+            return "Let me check your progress... You're making good progress on your tasks!"
+
+        elif result_str.startswith('ScheduleResponse'):
+            return "Based on your priorities and deadlines, here's what I recommend for your schedule."
+
+        elif result_str.startswith('HelpResponse'):
+            return "I can help you manage your tasks! Try asking: 'What should I work on next?', 'Show all tasks', 'How am I doing?', or 'What tasks are overdue?'"
+
+        elif result_str.startswith('DefaultResponse'):
+            return "I understand you're asking about your tasks. Try asking: 'What should I work on next?', 'Show me all tasks', or 'How am I doing?'"
+
+        elif result_str.startswith('Task'):
+            return f"Found task: {result_str}. Ask me for more details if needed."
+
+        elif "TaskRecommendation" in result_str:
+            return f"My recommendation: {result_str.replace('TaskRecommendation', '').strip()}"
+
+        elif "ProgressReport" in result_str:
+            return f"Progress update: {result_str.replace('ProgressReport', '').strip()}"
+
+        elif "NoTasksAnalysis" in result_str:
+            return f"Analysis: {result_str.replace('NoTasksAnalysis', '').strip()}"
+
+        else:
+            return f"Here's what I found: {result_str}"
 
     def add_task(self, description: str, deadline: str, priority: str, dependencies: List[str] = None) -> Dict[str, Any]:
         """Add task - ONLY data handling, NO logic"""

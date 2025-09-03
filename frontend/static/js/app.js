@@ -111,15 +111,19 @@ class TaskScheduler {
      * Update progress ring based on completion percentage
      */
     updateProgressRing(percentage) {
+        // Handle NaN and invalid values
+        const validPercentage = isNaN(percentage) || percentage === null || percentage === undefined ? 0 : percentage;
+        const safePercentage = Math.max(0, Math.min(100, validPercentage));
+
         const circle = document.querySelector('.progress-ring-circle');
         const radius = circle.r.baseVal.value;
         const circumference = radius * 2 * Math.PI;
-        const offset = circumference - (percentage / 100) * circumference;
+        const offset = circumference - (safePercentage / 100) * circumference;
 
         circle.style.strokeDashoffset = offset;
         circle.classList.add('active');
 
-        document.getElementById('progress-percentage').textContent = `${Math.round(percentage)}%`;
+        document.getElementById('progress-percentage').textContent = `${Math.round(safePercentage)}%`;
     }
 
     /**
@@ -374,8 +378,9 @@ class TaskScheduler {
             document.getElementById('progress-completed').textContent = stats.completed_tasks;
             document.getElementById('progress-pending').textContent = stats.pending_tasks;
 
-            // Update progress ring
-            this.updateProgressRing(stats.completion_percentage);
+            // Update progress ring - handle both completion_rate and completion_percentage
+            const completionRate = stats.completion_rate || stats.completion_percentage || 0;
+            this.updateProgressRing(completionRate);
 
             // Add urgency indicators if available
             if (stats.overdue_tasks > 0) {
