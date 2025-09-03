@@ -1,19 +1,8 @@
 {
-  "task_counter": 27,
+  "task_counter": 28,
   "tasks": [
     {
-      "id": "Task27",
-      "description": "what",
-      "deadline": "2025-09-03",
-      "priority": "Medium",
-      "dependencies": [
-        "Task15"
-      ],
-      "completed": false,
-      "days_until_deadline": -1
-    },
-    {
-      "id": "Task26",
+      "id": "Task10",
       "description": "Deploy application",
       "deadline": "2024-01-25",
       "priority": "Low",
@@ -24,47 +13,7 @@
       "days_until_deadline": -588
     },
     {
-      "id": "Task1",
-      "description": "Plan project structure",
-      "deadline": "2024-01-15",
-      "priority": "High",
-      "dependencies": [],
-      "completed": false,
-      "days_until_deadline": -598
-    },
-    {
-      "id": "Task25",
-      "description": "Write tests",
-      "deadline": "2024-01-22",
-      "priority": "Medium",
-      "dependencies": [
-        "Task3"
-      ],
-      "completed": false,
-      "days_until_deadline": -591
-    },
-    {
-      "id": "Task24",
-      "description": "Implement core features",
-      "deadline": "2024-01-20",
-      "priority": "Medium",
-      "dependencies": [
-        "Task2"
-      ],
-      "completed": false,
-      "days_until_deadline": -593
-    },
-    {
-      "id": "Task22",
-      "description": "Plan project structure",
-      "deadline": "2024-01-15",
-      "priority": "High",
-      "dependencies": [],
-      "completed": false,
-      "days_until_deadline": -598
-    },
-    {
-      "id": "Task23",
+      "id": "Task18",
       "description": "Set up development environment",
       "deadline": "2024-01-16",
       "priority": "High",
@@ -75,69 +24,7 @@
       "days_until_deadline": -597
     },
     {
-      "id": "Task13",
-      "description": "Implement core features",
-      "deadline": "2024-01-20",
-      "priority": "Medium",
-      "dependencies": [
-        "Task2"
-      ],
-      "completed": false,
-      "days_until_deadline": -593
-    },
-    {
-      "id": "Task4",
-      "description": "Write tests",
-      "deadline": "2024-01-22",
-      "priority": "Medium",
-      "dependencies": [
-        "Task3"
-      ],
-      "completed": false,
-      "days_until_deadline": -591
-    },
-    {
-      "id": "Task11",
-      "description": "Plan project structure",
-      "deadline": "2024-01-15",
-      "priority": "High",
-      "dependencies": [],
-      "completed": false,
-      "days_until_deadline": -598
-    },
-    {
-      "id": "Task12",
-      "description": "Set up development environment",
-      "deadline": "2024-01-16",
-      "priority": "High",
-      "dependencies": [
-        "Task1"
-      ],
-      "completed": false,
-      "days_until_deadline": -597
-    },
-    {
-      "id": "Task9",
-      "description": "Write tests",
-      "deadline": "2024-01-22",
-      "priority": "Medium",
-      "dependencies": [
-        "Task3"
-      ],
-      "completed": false,
-      "days_until_deadline": -591
-    },
-    {
-      "id": "Task17",
-      "description": "Plan project structure",
-      "deadline": "2024-01-15",
-      "priority": "High",
-      "dependencies": [],
-      "completed": false,
-      "days_until_deadline": -598
-    },
-    {
-      "id": "Task2",
+      "id": "Task7",
       "description": "Set up development environment",
       "deadline": "2024-01-16",
       "priority": "High",
@@ -159,39 +46,6 @@
       "days_until_deadline": -593
     },
     {
-      "id": "Task21",
-      "description": "Deploy application",
-      "deadline": "2024-01-25",
-      "priority": "Low",
-      "dependencies": [
-        "Task4"
-      ],
-      "completed": false,
-      "days_until_deadline": -588
-    },
-    {
-      "id": "Task10",
-      "description": "Deploy application",
-      "deadline": "2024-01-25",
-      "priority": "Low",
-      "dependencies": [
-        "Task4"
-      ],
-      "completed": false,
-      "days_until_deadline": -588
-    },
-    {
-      "id": "Task5",
-      "description": "Deploy application",
-      "deadline": "2024-01-25",
-      "priority": "Low",
-      "dependencies": [
-        "Task4"
-      ],
-      "completed": false,
-      "days_until_deadline": -588
-    },
-    {
       "id": "Task3",
       "description": "Implement core features",
       "deadline": "2024-01-20",
@@ -203,7 +57,40 @@
       "days_until_deadline": -593
     },
     {
-      "id": "Task14",
+      "id": "Task8",
+      "description": "Implement core features",
+      "deadline": "2024-01-20",
+      "priority": "Medium",
+      "dependencies": [
+        "Task2"
+      ],
+      "completed": false,
+      "days_until_deadline": -593
+    },
+    {
+      "id": "Task21",
+      "description": "Deploy application",
+      "deadline": "2024-01-25",
+      "priority": "Low",
+      "dependencies": [
+        "Task4"
+      ],
+      "completed": false,
+      "days_until_deadline": -588
+    },
+    {
+      "id": "Task27",
+      "description": "what",
+      "deadline": "2025-09-03",
+      "priority": "Medium",
+      "dependencies": [
+        "Task15"
+      ],
+      "completed": false,
+      "days_until_deadline": -1
+    },
+    {
+      "id": "Task4",
       "description": "Write tests",
       "deadline": "2024-01-22",
       "priority": "Medium",
@@ -214,15 +101,15 @@
       "days_until_deadline": -591
     },
     {
-      "id": "Task18",
-      "description": "Set up development environment",
-      "deadline": "2024-01-16",
-      "priority": "High",
+      "id": "Task24",
+      "description": "Implement core features",
+      "deadline": "2024-01-20",
+      "priority": "Medium",
       "dependencies": [
-        "Task1"
+        "Task2"
       ],
       "completed": false,
-      "days_until_deadline": -597
+      "days_until_deadline": -593
     },
     {
       "id": "Task20",
@@ -236,6 +123,37 @@
       "days_until_deadline": -591
     },
     {
+      "id": "Task12",
+      "description": "Set up development environment",
+      "deadline": "2024-01-16",
+      "priority": "High",
+      "dependencies": [
+        "Task1"
+      ],
+      "completed": false,
+      "days_until_deadline": -597
+    },
+    {
+      "id": "Task28",
+      "description": "Test terminal logging",
+      "deadline": "2025-09-10",
+      "priority": "High",
+      "dependencies": [],
+      "completed": false,
+      "days_until_deadline": 6
+    },
+    {
+      "id": "Task13",
+      "description": "Implement core features",
+      "deadline": "2024-01-20",
+      "priority": "Medium",
+      "dependencies": [
+        "Task2"
+      ],
+      "completed": false,
+      "days_until_deadline": -593
+    },
+    {
       "id": "Task16",
       "description": "kgy",
       "deadline": "2025-09-03",
@@ -245,6 +163,28 @@
       ],
       "completed": false,
       "days_until_deadline": -1
+    },
+    {
+      "id": "Task25",
+      "description": "Write tests",
+      "deadline": "2024-01-22",
+      "priority": "Medium",
+      "dependencies": [
+        "Task3"
+      ],
+      "completed": false,
+      "days_until_deadline": -591
+    },
+    {
+      "id": "Task14",
+      "description": "Write tests",
+      "deadline": "2024-01-22",
+      "priority": "Medium",
+      "dependencies": [
+        "Task3"
+      ],
+      "completed": false,
+      "days_until_deadline": -591
     },
     {
       "id": "Task15",
@@ -267,18 +207,38 @@
       "days_until_deadline": -598
     },
     {
-      "id": "Task8",
-      "description": "Implement core features",
-      "deadline": "2024-01-20",
-      "priority": "Medium",
+      "id": "Task5",
+      "description": "Deploy application",
+      "deadline": "2024-01-25",
+      "priority": "Low",
       "dependencies": [
-        "Task2"
+        "Task4"
       ],
       "completed": false,
-      "days_until_deadline": -593
+      "days_until_deadline": -588
     },
     {
-      "id": "Task7",
+      "id": "Task26",
+      "description": "Deploy application",
+      "deadline": "2024-01-25",
+      "priority": "Low",
+      "dependencies": [
+        "Task4"
+      ],
+      "completed": false,
+      "days_until_deadline": -588
+    },
+    {
+      "id": "Task22",
+      "description": "Plan project structure",
+      "deadline": "2024-01-15",
+      "priority": "High",
+      "dependencies": [],
+      "completed": false,
+      "days_until_deadline": -598
+    },
+    {
+      "id": "Task2",
       "description": "Set up development environment",
       "deadline": "2024-01-16",
       "priority": "High",
@@ -287,7 +247,56 @@
       ],
       "completed": false,
       "days_until_deadline": -597
+    },
+    {
+      "id": "Task23",
+      "description": "Set up development environment",
+      "deadline": "2024-01-16",
+      "priority": "High",
+      "dependencies": [
+        "Task1"
+      ],
+      "completed": false,
+      "days_until_deadline": -597
+    },
+    {
+      "id": "Task9",
+      "description": "Write tests",
+      "deadline": "2024-01-22",
+      "priority": "Medium",
+      "dependencies": [
+        "Task3"
+      ],
+      "completed": false,
+      "days_until_deadline": -591
+    },
+    {
+      "id": "Task11",
+      "description": "Plan project structure",
+      "deadline": "2024-01-15",
+      "priority": "High",
+      "dependencies": [],
+      "completed": true,
+      "days_until_deadline": -598
+    },
+    {
+      "id": "Task17",
+      "description": "Plan project structure",
+      "deadline": "2024-01-15",
+      "priority": "High",
+      "dependencies": [],
+      "completed": false,
+      "days_until_deadline": -598
+    },
+    {
+      "id": "Task1",
+      "description": "Plan project structure",
+      "deadline": "2024-01-15",
+      "priority": "High",
+      "dependencies": [],
+      "completed": false,
+      "days_until_deadline": -598
     }
   ],
-  "timestamp": "2025-09-03T04:46:45.581189"
+  "timestamp": "2025-09-03T07:16:31.830467"
 }

@@ -137,14 +137,33 @@ class MeTTaBridge:
         task_atom = f'(task {task_id} Description "{description}" Deadline "{deadline}" Priority {priority} Dependencies {deps_str})'
 
         try:
+            # Log MeTTa operation to terminal
+            print(f"\n--- MeTTa Task Addition ---")
+            print(f"\n{task_atom}")
+            print(f"\n--- End Task Addition ---")
+
             # Add task to MeTTa space
-            self.metta.run(task_atom)
+            result = self.metta.run(task_atom)
+            print(f"\nRaw MeTTa output: {result}")
 
             # Validate for circular dependencies
-            validation_result = self.metta.run(f'!(validateTask {task_id} {deps_str})')
+            validation_query = f'!(validateTask {task_id} {deps_str})'
+            print(f"\n--- MeTTa Validation Query ---")
+            print(f"\n{validation_query}")
+            print(f"\n--- End Validation Query ---")
+
+            validation_result = self.metta.run(validation_query)
+            print(f"\nRaw MeTTa validation output: {validation_result}")
+
             if validation_result and validation_result[0] and not validation_result[0][0]:
                 # Remove the invalid task
-                self.metta.run(f'!(remove-atom &self {task_atom})')
+                remove_query = f'!(remove-atom &self {task_atom})'
+                print(f"\n--- MeTTa Task Removal (Circular Dependency) ---")
+                print(f"\n{remove_query}")
+                print(f"\n--- End Task Removal ---")
+
+                remove_result = self.metta.run(remove_query)
+                print(f"\nRaw MeTTa removal output: {remove_result}")
                 return {"success": False, "error": "Circular dependency detected"}
 
             # Save tasks to file for persistence
@@ -156,6 +175,7 @@ class MeTTaBridge:
                 "message": f"Task '{description}' added successfully"
             }
         except Exception as e:
+            print(f"\nMeTTa Task Addition Error: {str(e)}")
             return {"success": False, "error": str(e)}
 
     def _task_exists(self, task_id: str) -> bool:
@@ -247,13 +267,21 @@ class MeTTaBridge:
             if not self._task_exists(task_id):
                 return {"success": False, "error": "Task does not exist"}
 
-            self.metta.run(f'!(completeTask {task_id})')
+            # Log MeTTa operation to terminal
+            complete_query = f'!(completeTask {task_id})'
+            print(f"\n--- MeTTa Task Completion ---")
+            print(f"\n{complete_query}")
+            print(f"\n--- End Task Completion ---")
+
+            result = self.metta.run(complete_query)
+            print(f"\nRaw MeTTa output: {result}")
 
             # Save tasks to file for persistence
             self._save_tasks_to_file()
 
             return {"success": True, "message": f"Task {task_id} marked as completed"}
         except Exception as e:
+            print(f"\nMeTTa Task Completion Error: {str(e)}")
             return {"success": False, "error": str(e)}
 
     def get_task_dependencies(self, task_id: str) -> List[str]:
@@ -307,22 +335,49 @@ class MeTTaBridge:
                 }
 
             # Remove task and its status
-            task_result = self.metta.run(f'!(match &self (task {task_id} Description $desc Deadline $deadline Priority $priority Dependencies $deps) (task {task_id} Description $desc Deadline $deadline Priority $priority Dependencies $deps))')
+            task_query = f'!(match &self (task {task_id} Description $desc Deadline $deadline Priority $priority Dependencies $deps) (task {task_id} Description $desc Deadline $deadline Priority $priority Dependencies $deps))'
+            print(f"\n--- MeTTa Task Deletion Query ---")
+            print(f"\n{task_query}")
+            print(f"\n--- End Task Deletion Query ---")
+
+            task_result = self.metta.run(task_query)
+            print(f"\nRaw MeTTa task query output: {task_result}")
+
             if task_result and task_result[0]:
                 task_atom = task_result[0][0]
-                self.metta.run(f'!(remove-atom &self {task_atom})')
+                remove_query = f'!(remove-atom &self {task_atom})'
+                print(f"\n--- MeTTa Task Removal ---")
+                print(f"\n{remove_query}")
+                print(f"\n--- End Task Removal ---")
+
+                remove_result = self.metta.run(remove_query)
+                print(f"\nRaw MeTTa removal output: {remove_result}")
 
             # Remove task status if exists
-            status_result = self.metta.run(f'!(match &self (taskStatus {task_id} $status) (taskStatus {task_id} $status))')
+            status_query = f'!(match &self (taskStatus {task_id} $status) (taskStatus {task_id} $status))'
+            print(f"\n--- MeTTa Status Deletion Query ---")
+            print(f"\n{status_query}")
+            print(f"\n--- End Status Deletion Query ---")
+
+            status_result = self.metta.run(status_query)
+            print(f"\nRaw MeTTa status query output: {status_result}")
+
             if status_result and status_result[0]:
                 status_atom = status_result[0][0]
-                self.metta.run(f'!(remove-atom &self {status_atom})')
+                status_remove_query = f'!(remove-atom &self {status_atom})'
+                print(f"\n--- MeTTa Status Removal ---")
+                print(f"\n{status_remove_query}")
+                print(f"\n--- End Status Removal ---")
+
+                status_remove_result = self.metta.run(status_remove_query)
+                print(f"\nRaw MeTTa status removal output: {status_remove_result}")
 
             # Save tasks to file for persistence
             self._save_tasks_to_file()
 
             return {"success": True, "message": f"Task {task_id} deleted successfully"}
         except Exception as e:
+            print(f"\nMeTTa Task Deletion Error: {str(e)}")
             return {"success": False, "error": str(e)}
 
     def get_overdue_tasks(self) -> List[str]:
@@ -448,41 +503,21 @@ class MeTTaBridge:
             return self.get_completion_stats()
 
     def execute_metta_query(self, query: str) -> Dict[str, Any]:
-        """Execute raw MeTTa query and return both raw and processed results with detailed debug info"""
+        """Execute raw MeTTa query and return both raw and processed results with proper terminal logging"""
         try:
-            print(f"\n🧠 MeTTa Query Execution Started")
-            print(f"📝 Query: {query}")
-            print(f"⏰ Timestamp: {datetime.now().isoformat()}")
+            # Clean terminal logging like trainer's project
+            print(f"\n--- MeTTa Query ---")
+            print(f"\n{query}")
+            print(f"\n--- End Query ---")
 
             # Execute the query
-            print(f"🔄 Executing MeTTa query...")
             raw_result = self.metta.run(query)
 
-            # Detailed logging of raw MeTTa output
-            print(f"✅ MeTTa Execution Complete")
-            print(f"🔍 Raw Result Type: {type(raw_result)}")
-            print(f"🔍 Raw Result Value: {raw_result}")
-
-            if raw_result:
-                print(f"📊 Result Length: {len(raw_result)}")
-                if len(raw_result) > 0:
-                    print(f"🎯 First Element: {raw_result[0]}")
-                    print(f"🎯 First Element Type: {type(raw_result[0])}")
-
-                    if hasattr(raw_result[0], '__iter__') and not isinstance(raw_result[0], str):
-                        print(f"📋 First Element Contents:")
-                        for i, item in enumerate(raw_result[0]):
-                            print(f"   [{i}]: {item} (type: {type(item)})")
-                            if hasattr(item, 'get_children'):
-                                children = item.get_children()
-                                print(f"       Children: {children}")
-            else:
-                print(f"❌ No results returned from MeTTa")
+            # Log raw MeTTa output to terminal
+            print(f"\nRaw MeTTa output: {raw_result}")
 
             # Process result for user-friendly display
-            print(f"🔄 Processing result for user display...")
             processed_result = self._process_metta_result(raw_result, query)
-            print(f"✅ Processing complete")
 
             # Create detailed debug information
             debug_info = {
@@ -505,9 +540,7 @@ class MeTTaBridge:
 
         except Exception as e:
             error_msg = f"Error executing MeTTa query: {e}"
-            print(f"❌ {error_msg}")
-            print(f"🔍 Exception Type: {type(e)}")
-            print(f"🔍 Exception Details: {str(e)}")
+            print(f"\nMeTTa Error: {error_msg}")
 
             return {
                 "success": False,
