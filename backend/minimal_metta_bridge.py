@@ -141,6 +141,25 @@ class MinimalMeTTaBridge:
                 if all(isinstance(item, str) and item.startswith('Task') for item in result):
                     return f"I found {len(result)} tasks: {', '.join(result)}. Ask me about any specific task for more details."
                 else:
+                    # Check if this is a list of AllTasksList responses
+                    result_str = str(result)
+                    if 'AllTasksList' in result_str or 'AllTasksResponse' in result_str:
+                        import re
+                        task_matches = re.findall(r'Task\d+', result_str)
+                        if task_matches:
+                            unique_tasks = list(set(task_matches))  # Remove duplicates
+                            unique_tasks.sort()  # Sort for consistent order
+                            return f"Here are all your tasks: {', '.join(unique_tasks)}. You have {len(unique_tasks)} tasks total."
+                    elif 'ProgressResponse' in result_str:
+                        import re
+                        message_match = re.search(r'ProgressResponse\s+"([^"]+)"', result_str)
+                        if message_match:
+                            return message_match.group(1)
+                        else:
+                            return "Let me check your progress... You're making good progress on your tasks!"
+                    elif 'HelpResponse' in result_str:
+                        return "I can help you manage your tasks! Try asking: 'What is the next task?', 'Show all tasks', 'How am I doing?', or ask me anything about your tasks!"
+
                     return f"Here are the results: {', '.join(str(item) for item in result)}"
         else:
             # Single result
@@ -167,23 +186,37 @@ class MinimalMeTTaBridge:
             else:
                 return f"I recommend: {result_str.replace('NextTask', '').strip()}"
 
-        elif result_str.startswith('TaskListResponse'):
-            return "Here are all your tasks. You can ask me about specific tasks or what to work on next."
-
-        elif result_str.startswith('OverdueResponse'):
-            if "No overdue" in result_str:
-                return "Great news! You don't have any overdue tasks. Keep up the good work!"
+        elif 'AllTasksList' in result_str or 'AllTasksResponse' in result_str:
+            # Extract task list from response
+            import re
+            # Try to find task IDs in the response
+            task_matches = re.findall(r'Task\d+', result_str)
+            if task_matches:
+                unique_tasks = list(set(task_matches))  # Remove duplicates
+                return f"Here are all your tasks: {', '.join(unique_tasks)}. You have {len(unique_tasks)} tasks total."
             else:
-                return "You have some overdue tasks that need attention. I recommend prioritizing these first."
+                return "Here are all your tasks. You can ask me about specific tasks or what to work on next."
 
-        elif result_str.startswith('ProgressResponse'):
-            return "Let me check your progress... You're making good progress on your tasks!"
+        elif result_str.startswith('ProgressResponse') or result_str.startswith('(ProgressResponse'):
+            # Extract progress info
+            import re
+            # Try to extract numeric progress first
+            progress_match = re.search(r'ProgressResponse\s+(\d+)\s+(\d+)', result_str)
+            if progress_match:
+                total, completed = progress_match.groups()
+                pending = int(total) - int(completed)
+                completion_rate = (int(completed) / int(total) * 100) if int(total) > 0 else 0
+                return f"You have {total} total tasks: {completed} completed and {pending} pending. That's {completion_rate:.1f}% completion rate!"
+            else:
+                # Try to extract string message
+                message_match = re.search(r'ProgressResponse\s+"([^"]+)"', result_str)
+                if message_match:
+                    return message_match.group(1)
+                else:
+                    return "Let me check your progress... You're making good progress on your tasks!"
 
-        elif result_str.startswith('ScheduleResponse'):
-            return "Based on your priorities and deadlines, here's what I recommend for your schedule."
-
-        elif result_str.startswith('HelpResponse'):
-            return "I can help you manage your tasks! Try asking: 'What should I work on next?', 'Show all tasks', 'How am I doing?', or 'What tasks are overdue?'"
+        elif result_str.startswith('HelpResponse') or result_str.startswith('(HelpResponse'):
+            return "I can help you manage your tasks! Try asking: 'What is the next task?', 'Show all tasks', 'How am I doing?', or ask me anything about your tasks!"
 
         elif result_str.startswith('DefaultResponse'):
             return "I understand you're asking about your tasks. Try asking: 'What should I work on next?', 'Show me all tasks', or 'How am I doing?'"

@@ -9,28 +9,51 @@
 ; NATURAL LANGUAGE PROCESSING - PURE METTA
 ; ============================================================================
 
-; Main query processor - handles all user questions - SIMPLIFIED
+; Main query processor - handles all user questions
 (= (processUserQuestion $question)
-   (NextTask Task1 "Plan project structure" "2025-09-05"))
+   (if (isNextQuestion $question)
+       (getNextTaskWithFullReason)
+       (if (isAllTasksQuestion $question)
+           (getAllTasksFormatted)
+           (if (isProgressQuestion $question)
+               (getProgressSummary)
+               (if (isHelpQuestion $question)
+                   (getHelpMessage)
+                   (getNextTaskWithFullReason))))))
 
-; Simple string contains check
-(= (contains $str $substr) True)  ; Simplified - always return next task for now
+; Question type detection functions - simplified
+(= (isNextQuestion $question)
+   (if (== $question "What is the next task?") True
+       (if (== $question "What should I work on next?") True
+           (if (== $question "What task should I do next?") True False))))
 
-; Get all tasks response
-(= (getAllTasksResponse)
-   (TaskListResponse (getAllTasks)))
+(= (isAllTasksQuestion $question)
+   (if (== $question "Show all tasks") True
+       (if (== $question "List all tasks") True
+           (if (== $question "What are all my tasks?") True False))))
 
-; Get overdue response
-(= (getOverdueResponse)
-   (OverdueResponse "No overdue tasks"))
+(= (isProgressQuestion $question)
+   (if (== $question "How am I doing?") True
+       (if (== $question "What's my progress?") True
+           (if (== $question "Show my progress") True False))))
 
-; Get progress response
-(= (getProgressResponse)
-   (ProgressResponse "Making good progress"))
+(= (isHelpQuestion $question)
+   (if (== $question "Help") True
+       (if (== $question "What can you do?") True
+           (if (== $question "How can you help me?") True False))))
 
-; Get help response
-(= (getHelpResponse)
-   (HelpResponse "I can help with task management"))
+; Get all tasks formatted response
+(= (getAllTasksFormatted)
+   (let $tasks (getAllTasks)
+        (AllTasksList $tasks)))
+
+; Get progress summary
+(= (getProgressSummary)
+   (ProgressResponse "You're making good progress on your tasks!"))
+
+; Get help message
+(= (getHelpMessage)
+   (HelpResponse "I can help you manage your tasks. Ask me about your next task, all tasks, or your progress!"))
 
 ; ============================================================================
 ; TASK RECOMMENDATION ENGINE - PURE METTA LOGIC
