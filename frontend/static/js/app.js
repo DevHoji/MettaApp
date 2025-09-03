@@ -542,7 +542,7 @@ class TaskScheduler {
     }
 
     /**
-     * Show task details in modal
+     * Show task details in modal with enhanced dependency visualization
      */
     showTaskDetails(taskId) {
         const task = this.tasks.find(t => t.id === taskId);
@@ -554,17 +554,34 @@ class TaskScheduler {
 
         modalTitle.textContent = task.description;
 
+        // Enhanced dependency visualization as per problem statement
         const dependenciesHtml = task.dependencies.length > 0
             ? `<div class="detail-section">
-                 <h4>Dependencies</h4>
-                 <ul>
+                 <h4><i class="fas fa-link"></i> Dependencies</h4>
+                 <div class="dependency-graph">
                    ${task.dependencies.map(depId => {
                        const depTask = this.tasks.find(t => t.id === depId);
-                       return `<li>${depTask ? depTask.description : depId}</li>`;
+                       const isCompleted = depTask ? depTask.completed : false;
+                       const statusIcon = isCompleted ? '<i class="fas fa-check-circle text-success"></i>' : '<i class="fas fa-clock text-warning"></i>';
+                       const statusText = isCompleted ? 'Completed' : 'Pending';
+                       return `
+                         <div class="dependency-item ${isCompleted ? 'completed' : 'pending'}">
+                           ${statusIcon}
+                           <span class="dependency-name">${depTask ? depTask.description : depId}</span>
+                           <span class="dependency-status">(${statusText})</span>
+                         </div>`;
                    }).join('')}
-                 </ul>
+                 </div>
+                 <div class="dependency-summary">
+                   <small><i class="fas fa-info-circle"></i>
+                   ${task.dependencies.filter(depId => {
+                       const depTask = this.tasks.find(t => t.id === depId);
+                       return depTask && depTask.completed;
+                   }).length} of ${task.dependencies.length} dependencies completed
+                   </small>
+                 </div>
                </div>`
-            : '<div class="detail-section"><h4>Dependencies</h4><p>No dependencies</p></div>';
+            : '<div class="detail-section"><h4><i class="fas fa-link"></i> Dependencies</h4><p>No dependencies - ready to start!</p></div>';
 
         modalBody.innerHTML = `
             <div class="task-details">

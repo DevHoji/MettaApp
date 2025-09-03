@@ -94,6 +94,34 @@ def add_task():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route('/add-task', methods=['POST'])
+def add_task_legacy():
+    """Legacy add-task endpoint as specified in problem statement"""
+    try:
+        if not metta_bridge:
+            return jsonify({"error": "MeTTa bridge not initialized"}), 500
+
+        data = request.get_json()
+
+        # Extract parameters as per problem statement
+        description = data.get('description', '')
+        deadline = data.get('deadline', '')
+        priority = data.get('priority', 'Medium')
+        dependencies = data.get('dependencies', [])
+
+        # Add task and get schedule
+        result = metta_bridge.add_task(description, deadline, priority, dependencies)
+
+        if result['success']:
+            # Get updated schedule as specified in problem statement
+            schedule = metta_bridge.get_scheduled_tasks()
+            return jsonify({"success": True, "schedule": schedule, "task_id": result['task_id']})
+        else:
+            return jsonify(result), 400
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route('/api/tasks/<task_id>/complete', methods=['POST'])
 def complete_task(task_id):
     """Mark a task as completed"""

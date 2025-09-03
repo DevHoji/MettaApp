@@ -158,7 +158,25 @@ class MinimalMeTTaBridge:
                         else:
                             return "Let me check your progress... You're making good progress on your tasks!"
                     elif 'HelpResponse' in result_str:
-                        return "I can help you manage your tasks! Try asking: 'What is the next task?', 'Show all tasks', 'How am I doing?', or ask me anything about your tasks!"
+                        return "I can help you manage your tasks! Try asking: 'What is the next task?', 'Show all tasks', 'How am I doing?', 'What tasks are overdue?', or 'Schedule my tasks'!"
+                    elif 'OverdueResponse' in result_str:
+                        import re
+                        # Try to extract overdue task info
+                        if 'OverdueTasksList' in result_str:
+                            task_matches = re.findall(r'Task\d+', result_str)
+                            if task_matches:
+                                return f"You have {len(task_matches)} overdue tasks: {', '.join(task_matches)}. I recommend prioritizing these first!"
+                            else:
+                                return "Great news! You don't have any overdue tasks."
+                        else:
+                            return "Let me check your overdue tasks..."
+                    elif 'ScheduleResponse' in result_str:
+                        import re
+                        message_match = re.search(r'ScheduleResponse\s+"([^"]+)"', result_str)
+                        if message_match:
+                            return message_match.group(1)
+                        else:
+                            return "Based on your priorities and deadlines, I recommend focusing on high-priority tasks first, then medium priority tasks."
 
                     return f"Here are the results: {', '.join(str(item) for item in result)}"
         else:
@@ -216,7 +234,26 @@ class MinimalMeTTaBridge:
                     return "Let me check your progress... You're making good progress on your tasks!"
 
         elif result_str.startswith('HelpResponse') or result_str.startswith('(HelpResponse'):
-            return "I can help you manage your tasks! Try asking: 'What is the next task?', 'Show all tasks', 'How am I doing?', or ask me anything about your tasks!"
+            return "I can help you manage your tasks! Try asking: 'What is the next task?', 'Show all tasks', 'How am I doing?', 'What tasks are overdue?', or 'Schedule my tasks'!"
+
+        elif result_str.startswith('OverdueResponse') or result_str.startswith('(OverdueResponse'):
+            import re
+            if 'OverdueTasksList' in result_str:
+                task_matches = re.findall(r'Task\d+', result_str)
+                if task_matches:
+                    return f"You have {len(task_matches)} overdue tasks: {', '.join(task_matches)}. I recommend prioritizing these first!"
+                else:
+                    return "Great news! You don't have any overdue tasks."
+            else:
+                return "Let me check your overdue tasks..."
+
+        elif result_str.startswith('ScheduleResponse') or result_str.startswith('(ScheduleResponse'):
+            import re
+            message_match = re.search(r'ScheduleResponse\s+"([^"]+)"', result_str)
+            if message_match:
+                return message_match.group(1)
+            else:
+                return "Based on your priorities and deadlines, I recommend focusing on high-priority tasks first, then medium priority tasks."
 
         elif result_str.startswith('DefaultResponse'):
             return "I understand you're asking about your tasks. Try asking: 'What should I work on next?', 'Show me all tasks', or 'How am I doing?'"
@@ -237,14 +274,18 @@ class MinimalMeTTaBridge:
             return f"Here's what I found: {result_str}"
 
     def add_task(self, description: str, deadline: str, priority: str, dependencies: List[str] = None) -> Dict[str, Any]:
-        """Add task - ONLY data handling, NO logic"""
+        """Add task with intelligent dependency detection"""
         try:
             if dependencies is None:
                 dependencies = []
-            
+
+            # If no dependencies provided, use intelligent dependency detection
+            if not dependencies:
+                dependencies = self._detect_intelligent_dependencies(description, priority, deadline)
+
             self.task_counter += 1
             task_id = f"Task{self.task_counter}"
-            
+
             # Create MeTTa atom - ONLY data conversion
             deps_str = " ".join(dependencies) if dependencies else ""
             task_atom = f'(task {task_id} Description "{description}" Deadline "{deadline}" Priority {priority} Dependencies ({deps_str}))'
@@ -269,6 +310,143 @@ class MinimalMeTTaBridge:
         except Exception as e:
             print(f"\nMeTTa Task Addition Error: {str(e)}")
             return {"success": False, "error": str(e)}
+
+    def _detect_intelligent_dependencies(self, description: str, priority: str, deadline: str) -> List[str]:
+        """Intelligently detect task dependencies based on description and existing tasks"""
+        try:
+            dependencies = []
+            existing_tasks = self.get_all_tasks()
+
+            # Convert description to lowercase for matching
+            desc_lower = description.lower()
+
+            # Rule-based dependency detection
+            for task in existing_tasks:
+                if task['completed']:
+                    continue  # Skip completed tasks
+
+                task_desc_lower = task['description'].lower()
+
+                # Dependency rules based on common software development patterns
+                if self._should_depend_on(desc_lower, task_desc_lower):
+                    dependencies.append(task['id'])
+
+            # Limit to maximum 2 dependencies to avoid over-complexity
+            return dependencies[:2]
+
+        except Exception as e:
+            print(f"Error detecting dependencies: {e}")
+            return []
+
+    def _should_depend_on(self, new_task_desc: str, existing_task_desc: str) -> bool:
+        """Determine if new task should depend on existing task based on description patterns"""
+
+        # Common dependency patterns in software development
+        dependency_patterns = [
+            # Setup/Planning dependencies
+            ("test", "implement"),
+            ("test", "develop"),
+            ("deploy", "test"),
+            ("deploy", "implement"),
+            ("deploy", "develop"),
+            ("document", "implement"),
+            ("document", "develop"),
+
+            # Infrastructure dependencies
+            ("implement", "setup"),
+            ("implement", "plan"),
+            ("develop", "setup"),
+            ("develop", "plan"),
+            ("code", "setup"),
+            ("code", "plan"),
+
+            # Feature dependencies
+            ("feature", "structure"),
+            ("feature", "framework"),
+            ("ui", "backend"),
+            ("frontend", "api"),
+            ("frontend", "backend"),
+        ]
+
+        # Check if new task should depend on existing task
+        for new_keyword, existing_keyword in dependency_patterns:
+            if new_keyword in new_task_desc and existing_keyword in existing_task_desc:
+                return True
+
+        # Check for direct mentions (e.g., "test user authentication" depends on "implement user authentication")
+        # Extract key words from existing task
+        existing_words = set(existing_task_desc.split())
+        new_words = set(new_task_desc.split())
+
+        # If they share significant words and existing task is more foundational
+        common_words = existing_words.intersection(new_words)
+        if len(common_words) >= 2:  # At least 2 words in common
+            foundational_keywords = ["setup", "plan", "structure", "implement", "create", "build"]
+            if any(keyword in existing_task_desc for keyword in foundational_keywords):
+                return True
+
+        return False
+
+    def get_scheduled_tasks(self) -> List[Dict[str, Any]]:
+        """Get scheduled tasks using MeTTa scheduleTasks function"""
+        try:
+            result = self.metta.run('!(scheduleTasks)')
+            print(f"Schedule result: {result}")
+
+            # For now, return all tasks in optimal order
+            tasks = self.get_all_tasks()
+            # Sort by priority (High=1, Medium=2, Low=3) and deadline
+            priority_order = {'High': 1, 'Medium': 2, 'Low': 3}
+
+            def sort_key(task):
+                priority_val = priority_order.get(task['priority'], 4)
+                deadline_val = task['days_until_deadline']
+                return (priority_val, deadline_val)
+
+            sorted_tasks = sorted([t for t in tasks if not t['completed']], key=sort_key)
+            return sorted_tasks
+
+        except Exception as e:
+            print(f"Error getting scheduled tasks: {e}")
+            return []
+
+    def get_next_task(self) -> Dict[str, Any]:
+        """Get next recommended task"""
+        try:
+            result = self.metta.run('!(getNextTaskWithFullReason)')
+            print(f"Next task result: {result}")
+
+            # Parse MeTTa result and return structured data
+            if result and result[0]:
+                # For now, return the first incomplete high-priority task
+                tasks = self.get_all_tasks()
+                for task in tasks:
+                    if not task['completed'] and task['priority'] == 'High':
+                        return task
+
+                # If no high priority, return first incomplete task
+                for task in tasks:
+                    if not task['completed']:
+                        return task
+
+            return {}
+
+        except Exception as e:
+            print(f"Error getting next task: {e}")
+            return {}
+
+    def get_optimal_task_order(self) -> List[Dict[str, Any]]:
+        """Get optimal task order using MeTTa reasoning"""
+        try:
+            result = self.metta.run('!(generateOptimalOrder (getReadyTasks))')
+            print(f"Optimal order result: {result}")
+
+            # Return tasks sorted by optimal order
+            return self.get_scheduled_tasks()
+
+        except Exception as e:
+            print(f"Error getting optimal task order: {e}")
+            return []
 
     def complete_task(self, task_id: str) -> Dict[str, Any]:
         """Complete task - ONLY data update, NO logic"""
