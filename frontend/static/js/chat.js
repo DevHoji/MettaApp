@@ -7,11 +7,14 @@ class MeTTaChat {
     constructor() {
         this.apiBase = '/api';
         this.debugMode = false;
+        this.voiceEnabled = false;
+        this.speechSynthesis = window.speechSynthesis;
         this.init();
     }
 
     init() {
         this.setupEventListeners();
+        this.initializeVoice();
         this.focusInput();
         console.log('🧠 MeTTa Brain Chat initialized');
     }
@@ -52,6 +55,11 @@ class MeTTaChat {
         document.getElementById('clear-chat').addEventListener('click', () => {
             this.clearChat();
         });
+
+        // Voice toggle
+        document.getElementById('voice-toggle').addEventListener('click', () => {
+            this.toggleVoice();
+        });
     }
 
     focusInput() {
@@ -86,13 +94,24 @@ class MeTTaChat {
                 const botMessage = response.natural_answer || response.processed_result || "I processed your request successfully.";
                 this.addMessage(botMessage, 'bot');
 
+                // Speak the response if voice is enabled
+                if (this.voiceEnabled) {
+                    this.speakText(this.cleanTextForSpeech(botMessage));
+                }
+
                 // Show debug output if enabled
                 if (this.debugMode) {
                     this.updateDebugPanel(response);
                     this.addDebugToMessage(response);
                 }
             } else {
-                this.addMessage(`❌ Error: ${response.error || 'Unknown error occurred'}`, 'bot');
+                const errorMessage = `Error: ${response.error || 'Unknown error occurred'}`;
+                this.addMessage(errorMessage, 'bot');
+
+                // Speak error if voice is enabled
+                if (this.voiceEnabled) {
+                    this.speakText(errorMessage);
+                }
 
                 // Show error debug info if available
                 if (this.debugMode && response.error_type) {
@@ -289,6 +308,70 @@ class MeTTaChat {
             toast.classList.remove('show');
             setTimeout(() => toast.remove(), 300);
         }, 3000);
+    }
+
+    // Voice functionality
+    initializeVoice() {
+        if (!this.speechSynthesis) {
+            console.warn('Speech synthesis not supported');
+            document.getElementById('voice-toggle').style.display = 'none';
+            return;
+        }
+        console.log('🔊 Voice functionality initialized');
+    }
+
+    toggleVoice() {
+        this.voiceEnabled = !this.voiceEnabled;
+        const voiceButton = document.getElementById('voice-toggle');
+
+        if (this.voiceEnabled) {
+            voiceButton.classList.add('active');
+            voiceButton.title = 'Voice ON - Click to disable';
+            this.showToast('AI Voice enabled', 'success');
+        } else {
+            voiceButton.classList.remove('active');
+            voiceButton.title = 'Voice OFF - Click to enable';
+            this.speechSynthesis.cancel(); // Stop any ongoing speech
+            this.showToast('AI Voice disabled', 'info');
+        }
+    }
+
+    speakText(text) {
+        if (!this.speechSynthesis || !this.voiceEnabled) return;
+
+        // Cancel any ongoing speech
+        this.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.9;
+        utterance.pitch = 1.0;
+        utterance.volume = 0.8;
+
+        // Try to use a pleasant voice
+        const voices = this.speechSynthesis.getVoices();
+        const preferredVoice = voices.find(voice =>
+            voice.name.includes('Google') ||
+            voice.name.includes('Microsoft') ||
+            voice.lang.startsWith('en')
+        );
+
+        if (preferredVoice) {
+            utterance.voice = preferredVoice;
+        }
+
+        this.speechSynthesis.speak(utterance);
+    }
+
+    cleanTextForSpeech(text) {
+        // Remove emojis and special formatting for better speech
+        return text
+            .replace(/[🎯🔴🟡🟢⚠️✅💡📊📋🧠🔍❌⏳]/g, '')
+            .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold markdown
+            .replace(/\*(.*?)\*/g, '$1') // Remove italic markdown
+            .replace(/•/g, '') // Remove bullet points
+            .replace(/\n+/g, '. ') // Replace newlines with periods
+            .replace(/\s+/g, ' ') // Normalize whitespace
+            .trim();
     }
 }
 

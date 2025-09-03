@@ -309,15 +309,15 @@ if __name__ == '__main__':
                 today = datetime.now()
 
                 # Create tasks with dates relative to today
-                metta_bridge.add_task("Plan project structure", (today + timedelta(days=1)).strftime("%Y-%m-%d"), "High", [])
-                metta_bridge.add_task("Set up development environment", (today + timedelta(days=3)).strftime("%Y-%m-%d"), "High", ["Task1"])
-                metta_bridge.add_task("Implement core features", (today + timedelta(days=7)).strftime("%Y-%m-%d"), "Medium", ["Task2"])
-                metta_bridge.add_task("Write tests", (today + timedelta(days=10)).strftime("%Y-%m-%d"), "Medium", ["Task3"])
-                metta_bridge.add_task("Deploy application", (today + timedelta(days=14)).strftime("%Y-%m-%d"), "Low", ["Task4"])
+                metta_bridge.add_task("Plan project structure", (today + timedelta(days=2)).strftime("%Y-%m-%d"), "High", [])
+                metta_bridge.add_task("Set up development environment", (today + timedelta(days=5)).strftime("%Y-%m-%d"), "High", ["Task1"])
+                metta_bridge.add_task("Implement core features", (today + timedelta(days=10)).strftime("%Y-%m-%d"), "Medium", ["Task2"])
+                metta_bridge.add_task("Write tests", (today + timedelta(days=15)).strftime("%Y-%m-%d"), "Medium", ["Task3"])
+                metta_bridge.add_task("Deploy application", (today + timedelta(days=20)).strftime("%Y-%m-%d"), "Low", ["Task4"])
 
-                # Add some overdue tasks for testing
-                metta_bridge.add_task("Review documentation", (today - timedelta(days=2)).strftime("%Y-%m-%d"), "Medium", [])
-                metta_bridge.add_task("Update README", (today - timedelta(days=1)).strftime("%Y-%m-%d"), "Low", [])
+                # Add some overdue tasks for testing (only slightly overdue)
+                metta_bridge.add_task("Review documentation", (today - timedelta(days=1)).strftime("%Y-%m-%d"), "Medium", [])
+                metta_bridge.add_task("Update README", (today - timedelta(days=3)).strftime("%Y-%m-%d"), "Low", [])
 
                 print("Sample tasks added successfully with realistic dates")
             except Exception as e:

@@ -269,6 +269,37 @@
     transform: none;
 }
 
+.voice-button {
+    width: 50px;
+    height: 50px;
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #11998e, #38ef7d);
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 10px;
+}
+
+.voice-button:hover {
+    transform: scale(1.1);
+    box-shadow: var(--shadow-md);
+}
+
+.voice-button.active {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+}
+
+.voice-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
 /* Mode Toggle */
 .mode-toggle {
     display: flex;
