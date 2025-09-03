@@ -75,6 +75,12 @@
 ; Basic string contains function (simplified - always returns True for now)
 (= (contains $str $substr) True)
 
+; Get all tasks from MeTTa atom space
+; This function retrieves all task atoms stored in the knowledge base
+(= (getAllTasks)
+   (match &self (task $task Description $desc Deadline $deadline Priority $priority Dependencies $deps)
+          $task))
+
 ; Get all tasks formatted response
 (= (getAllTasksFormatted)
    (let $tasks (getAllTasks)
